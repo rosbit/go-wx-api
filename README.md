@@ -25,7 +25,7 @@ go-wx-api是对微信公众号API的封装，可以当作SDK使用
 
 ## 使用方法
 
-以下是一个简单的例子，详细的例子参考`samples/wx-echo-server`和`samples/wx-server`
+以下是一个简单的例子，用于说明使用go-wx-api的主要执行步骤。更详细的例子参考`samples/wx-echo-server`和`samples/wx-server`
 
 ```go
 package main
@@ -45,9 +45,12 @@ const (
 	
 	listenPort = 7070   // 服务侦听的端口号，请根据微信公众号管理端的服务器配置正确设置
 	service    = "/wx"  // 微信公众号管理端服务器配置中URL的路径部分
+
+	workerNum = 3 // 处理请求的并发数
 )
 
 func main() {
+	// 步骤1. 设置配置参数
 	wxconf.WxParams = wxconf.WxParamsT{Token:token, AppId:appId, AppSecret:appSecret}
 	if aesKey != "" {
 		if err := wxconf.SetAesKey(aesKey); err != nil {
@@ -56,6 +59,10 @@ func main() {
 		}
 	}
 
+	// 步骤2. 初始化SDK
+	wxapi.InitWxAPI(workerNum, os.Stdout)
+
+	// 步骤3. 设置http路由，启动http服务
 	http.HandleFunc(service, wxapi.Echo)     // 用于配置
 	http.HandleFunc(service, wxapi.Request)  // 用于实际执行公众号请求，和wxapi.Echo只能使用一个。
 	                                         // 可以使用高级路由功能同时设置，参考 github.com/rosbit/go-wx-api/samples/wx-echo-server
