@@ -62,6 +62,10 @@ func main() {
 	// 步骤2. 初始化SDK
 	wxapi.InitWxAPI(workerNum, os.Stdout)
 
+	// 步骤2.5 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
+	// signatureChecker := wxapi.NewWxSignatureChecker(wxconf.WxParams.Token, 0, []string{service})
+	// <middleWareContainer>.Use(signatureChecker)
+
 	// 步骤3. 设置http路由，启动http服务
 	http.HandleFunc(service, wxapi.Echo)     // 用于配置
 	http.HandleFunc(service, wxapi.Request)  // 用于实际执行公众号请求，和wxapi.Echo只能使用一个。
