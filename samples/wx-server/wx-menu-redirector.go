@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	// 缺省的菜单 state -> URL，可以动态更新
+	// 缺省的菜单 state -> URL，可以动态更新，根据环境变量 MENU_JSON_CONF 设置
 	_state2urls = map[string]string {
-		"1": "http://%s/today",
-		"2": "http://%s/history",
-		"3": "http://%s/about.html",
+		"1": "http://%s/here_are",
+		"2": "http://%s/just_some",
+		"3": "http://%s/samples.html",
 	}
 
 	_menuJsonFileMd5 string

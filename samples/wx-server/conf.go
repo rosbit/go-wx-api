@@ -39,8 +39,8 @@ var (
 	WxRedirect string
 	WxTimeout = 0
 	WelcomeFile string
-	MenuHandlerHost = "wxdev.yuanstar.com"
-	MsgHelperPrefix = "http://wxdev.yuanstar.com"
+	MenuHandlerHost = "yourhost.or.ip.here"
+	MsgHelperPrefix = "http://yourhost.or.ip.here"
 	MenuJsonConf = ""
 	Loc = time.FixedZone("UTC+8", 8*60*60)
 )
