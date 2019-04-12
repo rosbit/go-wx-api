@@ -77,7 +77,11 @@ func handleRedirect(openId, state string) (c string, h map[string]string, r stri
 		c = cc.(string)
 	}
 	if hh, ok := res["h"]; ok {
-		h = hh.(map[string]string)
+		h1 := hh.(map[string]interface{})
+		h = make(map[string]string, len(h1))
+		for k, v := range h1 {
+			h[k] = v.(string)
+		}
 	}
 	if rr, ok := res["r"]; ok {
 		r = rr.(string)
