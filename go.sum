@@ -1,13 +1,9 @@
 github.com/beevik/etree v1.1.0 h1:T0xke/WvNtMoCqgzPhkX2r4rjY3GDZFi+FjpRZY2Jbs=
 github.com/beevik/etree v1.1.0/go.mod h1:r8Aw8JqVegEf0w2fDnATrX9VpkMcyFeM0FhwO62wh+A=
-github.com/gernest/alien v0.1.0 h1:yjCZyo2a46tXmqfgHLUSwlr23GSn2PqWwAP3jPXfICQ=
-github.com/gernest/alien v0.1.0/go.mod h1:qtjw+zYKFIL3T2RPYS8TGpMx+ZPwUYFm+BPSd7F+AH0=
 github.com/olebedev/config v0.0.0-20180910155717-57f804269e64 h1:bS1cVBGfBJgWMkgvmyZ1E2uFuKACfsVZLWrfm0qTPc4=
 github.com/olebedev/config v0.0.0-20180910155717-57f804269e64/go.mod h1:RL5+WRxWTAXqqCi9i+eZlHrUtO7AQujUqWi+xMohmc4=
 github.com/rosbit/go-wget v1.0.0 h1:Xhqcd6PXvLiZYBY6cCZRZuTU6nel3I9M3RcQdylx2ms=
 github.com/rosbit/go-wget v1.0.0/go.mod h1:8Tt92GKM/K9WI65yYkX0lwJDnRp64Vd082ojViWT6T4=
-github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=
-github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
