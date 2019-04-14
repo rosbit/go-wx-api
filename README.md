@@ -1,31 +1,14 @@
-# 微信公众号API封装
+# 微信公众号开发SDK
 
 go-wx-api是对微信公众号API的封装，可以当作SDK使用
 
-## 下载方法
-
- 1. 命令行进入任一文件夹
- 2. 执行命令
-    ```bash
-    GOPATH=`pwd` go get -u github.com/rosbit/go-wx-api
-    ```
-
 ## 编译例子
- 1. 在go-wx-api所在文件夹下
- 2. 执行命令
-    ```bash
-    GOPATH=`pwd` go get -u github.com/rosbit/go-wx-api/samples/wx-echo-server
-    ```
-    命令执行成功后，会有一个可执行程序`bin/wx-echo-server`，该程序可以直接用于配置微信公众号**服务器配置**，并可以对公众号对话框输入做回声应答
- 4. 执行命令
-    ```bash
-    GOPATH=`pwd` go install github.com/rosbit/go-wx-api/samples/wx-server
-    ```
-    可以得到`bin/wx-server`，一个可以处理菜单的公众号服务
+ 1. 该函数包已经使用go modules发布，需要golang 1.11.x及以上版本
+ 1. 请参考[go-wx-apps](https://github.com/rosbit/go-wx-apps)，那里包含了例程和工具程序
 
 ## 使用方法
 
-以下是一个简单的例子，用于说明使用go-wx-api的主要执行步骤。更详细的例子参考`samples/wx-echo-server`和`samples/wx-server`
+以下是一个简单的例子，用于说明使用go-wx-api的主要执行步骤。更详细的例子参考[go-wx-apps](https://github.com/rosbit/go-wx-apps)
 
 ```go
 package main
@@ -74,10 +57,6 @@ func main() {
 }
 ```
 
-## 微信工具类程序
- 1. 在go-wx-api所在文件夹下
- 2. 执行命令
-     ```bash
-     GOPATH=`pwd` go install github.com/rosbit/go-wx-api/tools/create-wx-menu
-     ```
-     可以根据配置文件创建公众号的自定义菜单，5分钟内生效
+## 其它
+ 1. 该函数包可以处理文本消息、用户关注/取消关注事件、菜单点击事件
+ 2. 其它消息、事件可以根据需要扩充
