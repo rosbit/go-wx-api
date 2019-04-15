@@ -30,3 +30,12 @@ func SetAesKey(aesKey string) error {
 	}
 	return nil
 }
+
+func SetParams(token, appId, appSecret, aesKey string) error {
+	WxParams.Token, WxParams.AppId, WxParams.AppSecret = token, appId, appSecret
+	if aesKey == "" {
+		WxParams.AesKey = nil
+		return nil
+	}
+	return SetAesKey(aesKey)
+}
