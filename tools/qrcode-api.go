@@ -6,13 +6,13 @@ import (
 	"github.com/rosbit/go-wx-api/auth"
 )
 
-func CreateTempQRIntScene(accessToken string, sceneId int, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+func CreateTempQrIntScene(accessToken string, sceneId int, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
 	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createTempQr(accessToken, sceneId, expireInSec, "QR_SCENE", "scene_id")
 	return
 }
 
-func CreateTempQRStrScene(accessToken, sceneId string, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
-	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createTempQr(accessToken, sceneId, expireInSec, "QR_LIMIT_STR_SCENE", "scene_str")
+func CreateTempQrStrScene(accessToken, sceneId string, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createTempQr(accessToken, sceneId, expireInSec, "QR_STR_SCENE", "scene_str")
 	return
 }
 
@@ -29,7 +29,7 @@ func createTempQr(accessToken string, sceneId interface{}, expireInSec int, acti
 	return createQr(accessToken, params)
 }
 
-func CreateQRIntScene(accessToken string, sceneId int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+func CreateQrIntScene(accessToken string, sceneId int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
 	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createForeverQr(accessToken, sceneId, "QR_LIMIT_SCENE", "scene_id")
 	return
 }
