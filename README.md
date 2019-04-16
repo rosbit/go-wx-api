@@ -34,12 +34,9 @@ const (
 
 func main() {
 	// 步骤1. 设置配置参数
-	wxconf.WxParams = wxconf.WxParamsT{Token:token, AppId:appId, AppSecret:appSecret}
-	if aesKey != "" {
-		if err := wxconf.SetAesKey(aesKey); err != nil {
-			fmt.Printf("invalid aesKey: %v\n", err)
-			return
-		}
+	if err := wxconf.SetParams(token, appId, appSecret, aesKey); err != nil {
+		fmt.Printf("failed to set params: %v\n", err)
+		return
 	}
 
 	// 步骤2. 初始化SDK
