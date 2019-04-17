@@ -1,6 +1,5 @@
 /**
- * 注册微信消息/事件处理函数，用于覆盖缺省处理函数
- * 当前处理的消息/事件未全部覆盖，可以根据需要在此扩充
+ * 注册微信消息/事件处理器，用于覆盖缺省处理器
  */
 package wxapi
 
@@ -9,29 +8,16 @@ import (
 	"github.com/rosbit/go-wx-api/auth"
 )
 
-// 函数签名定义，各消息结构定义见msg_parser.go，返回结果结构定义见msg_reply.go
+// 函数签名定义，各消息结构定义见msg_receive.go，返回结果结构定义见msg_reply.go
 
-type TextMsgHandler func(*wxmsg.TextMsg) wxmsg.ReplyMsg                     // text消息处理
-type ViewEventHandler func(*wxmsg.ViewEvent) wxmsg.ReplyMsg                 // VIEW事件处理
-type SubscribeEventHandler func(*wxmsg.SubscribeEvent) wxmsg.ReplyMsg       // 用户关注(subscribe)服务号事件处理
-type UnsubscribeEventHandler func(*wxmsg.SubscribeEvent) wxmsg.ReplyMsg     // 用户取消关注(unsubscribe)服务号事件处理
-
-// 注册消息/事件处理函数
-
-func RegisterTextMsgHandler(handler TextMsgHandler) {
-	wxmsg.HandleTextMsg = handler
-}
-
-func RegisterViewEventHandler(handler ViewEventHandler) {
-	wxmsg.HandleViewEvent = handler
-}
-
-func RegisterSubscribeEventHandler(handler SubscribeEventHandler) {
-	wxmsg.HandleSubscribeEvent = handler
-}
-
-func UnregisterSubscribeEventHandler(handler UnsubscribeEventHandler) {
-	wxmsg.HandleUnsubscribeEvent = handler
+/**
+ * 注册消息/事件处理器
+ * @msgHandler  消息处理器
+ */
+func RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
+	if msgHandler != nil {
+		wxmsg.MsgHandler = msgHandler
+	}
 }
 
 /**

@@ -94,16 +94,15 @@ func _msgToPad(msgLen int) []byte {
 	return pad
 }
 
-func encryptMsg(msg, timestamp, nonce string) (string, string) {
-	bMsg := []byte(msg)
+func encryptMsg(msg []byte, timestamp, nonce string) (string, string) {
 	randBytes := GetRandomBytes(16)
 	msgLenInNet := make([]byte, 4)
-	binary.BigEndian.PutUint32(msgLenInNet, uint32(len(bMsg)))
+	binary.BigEndian.PutUint32(msgLenInNet, uint32(len(msg)))
 
 	origData := bytes.Buffer{}
 	origData.Write(randBytes)
 	origData.Write(msgLenInNet)
-	origData.Write(bMsg)
+	origData.Write(msg)
 	origData.WriteString(wxconf.WxParams.AppId)
 	pad := _msgToPad(origData.Len())
 	origData.Write(pad)

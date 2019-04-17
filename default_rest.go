@@ -50,7 +50,7 @@ func Request(w http.ResponseWriter, r *http.Request) {
 
 	replyMsg, err := wxmsg.GetReply(msgBody)
 	if err != nil || nonce == "" {
-		_WriteMessage(w, replyMsg)
+		_WriteBytes(w, replyMsg)
 		return
 	}
 	_WriteBytes(w, wxmsg.EncryptReply(replyMsg, timestamp, nonce))

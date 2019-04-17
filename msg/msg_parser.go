@@ -1,5 +1,5 @@
 /**
- * 服务号消息/事件的结构定义和解析，触发消息/事件处理
+ * 触发消息/事件处理
  * 1. wxapi.ParseMessageBody()  --- 获取消息/事件的(消息体,时间戳,nonce,error)，主要用于调试
  * 2. wxapi.GetReply([]byte)    --- 根据消息体触发消息处理函数得到返回结果。如果使用default_rest.go的实现不需要关心它
  */
@@ -8,25 +8,13 @@ package wxmsg
 import (
 	"github.com/beevik/etree"
 	"fmt"
-	"strconv"
 	"net/http"
 	"io/ioutil"
 	"net/url"
 	"github.com/rosbit/go-wx-api/log"
 )
 
-const (
-	SUCCESS_TEXT = "success"
-
-	// msgType
-	MT_TEXT  = "text"
-	MT_EVENT = "event"
-
-	// event type
-	ET_SUBSCRIBE   = "subscribe"
-	ET_UNSUBSCRIBE = "unsubscribe"
-	ET_VIEW        = "VIEW"
-)
+var SUCCESS_TEXT = []byte("success")
 
 var MustSignatureArgs = []string{"signature", "timestamp", "nonce"}
 const (
@@ -35,89 +23,36 @@ const (
 	NONCE
 )
 
-func _getText(el *etree.Element, tagName string) (string, error) {
-	t := el.SelectElement(tagName)
-	if t == nil {
-		return "", fmt.Errorf("%s not found", tagName)
-	}
-	return t.Text(), nil
+// msgType => ReceivedMsg
+var newMessages = map[string]func()ReceivedMsg {
+	MT_TEXT:       func()ReceivedMsg { return &TextMsg{} },
+	MT_IMAGE:      func()ReceivedMsg { return &ImageMsg{} },
+	MT_VOICE:      func()ReceivedMsg { return &VoiceMsg{} },
+	MT_VIDEO:      func()ReceivedMsg { return &VideoMsg{} },
+	MT_SHORTVIDEO: func()ReceivedMsg { return &VideoMsg{} },
+	MT_LOCATION:   func()ReceivedMsg { return &LocationMsg{} },
+	MT_LINK:       func()ReceivedMsg { return &LinkMsg{} },
 }
 
-// --------------------- message -------------------
-type BaseMsg struct {
-	ToUserName string
-	FromUserName string
-	CreateTime int
-	MsgType string
-}
-
-func (m *BaseMsg) parse(root *etree.Element) {
-	m.ToUserName, _   = _getText(root, "ToUserName")
-	m.FromUserName, _ = _getText(root, "FromUserName")
-	m.MsgType, _      = _getText(root, "MsgType")
-	ct, _            := _getText(root, "CreateTime")
-	m.CreateTime, _ = strconv.Atoi(ct)
-}
-
-type Msg struct {
-	BaseMsg
-	MsgId string
-}
-
-func (m *Msg) parse(root *etree.Element) {
-	m.BaseMsg.parse(root)
-	m.MsgId, _ = _getText(root, "MsgId")
-}
-
-type TextMsg struct {
-	Msg
-	Content string
-}
-
-func (m *TextMsg) parse(root *etree.Element) {
-	m.Msg.parse(root)
-	m.Content, _ = _getText(root, "Content")
-}
-
-// ------------- event ---------------
-type EventMsg struct {
-	Msg
-	Event string
-}
-
-func (m *EventMsg) parse(root *etree.Element) {
-	m.Msg.parse(root)
-	m.Event, _ = _getText(root, "Event")
-}
-
-// VIEW
-type ViewEvent struct {
-	EventMsg
-	EventKey string
-	MenuId string
-}
-
-func (m *ViewEvent) parse(root *etree.Element) {
-	m.EventMsg.parse(root)
-	m.EventKey, _ = _getText(root, "EventKey")
-	m.MenuId, _   = _getText(root, "MenuId")
-}
-
-// subscribe, unsubscribe
-type SubscribeEvent struct {
-	EventMsg
-	EventKey string
-	Ticket string
-}
-
-func (m *SubscribeEvent) parse(root *etree.Element) {
-	m.EventMsg.parse(root)
-	m.EventKey, _ = _getText(root, "EventKey")
-	m.Ticket, _   = _getText(root, "Ticket")
+// eventType => ReceivedMsg
+var newEvents = map[string]func()ReceivedMsg {
+	ET_VIEW:       func()ReceivedMsg { return &ViewEvent{} },
+	ET_CLICK:      func()ReceivedMsg { return &ClickEvent{} },
+	ET_SUBSCRIBE:  func()ReceivedMsg { return &SubscribeEvent{} },
+	ET_UNSUBSCRIBE:func()ReceivedMsg { return &SubscribeEvent{} },
+	ET_WHERE:      func()ReceivedMsg { return &WhereEvent{} },
+	ET_LOCATION:   func()ReceivedMsg { return &LocationEvent{} },
+	ET_PIC_SYSPHOTO:       func()ReceivedMsg { return &PhotoEvent{} },
+	ET_PIC_PHOTO_OR_ALBUM: func()ReceivedMsg { return &PhotoEvent{} },
+	ET_PIC_WEIXIN:         func()ReceivedMsg { return &PhotoEvent{} },
+	ET_SCANCODE_WAITMSG:   func()ReceivedMsg { return &ScanEvent{} },
+	ET_SCANCODE_PUSH:      func()ReceivedMsg { return &ScanEvent{} },
+	ET_MASSSENDJOBFINISH:     func()ReceivedMsg { return &MassSentEvent{} },
+	ET_TEMPLATESENDJOBFINISH: func()ReceivedMsg { return &TemplateSentEvent{} },
 }
 
 // 消息/事件主处理流程：分析消息内容、根据消息类型触发消息处理函数、返回结果消息
-func getReply(msgBody []byte) (string, error) {
+func getReply(msgBody []byte) ([]byte, error) {
 	msg := etree.NewDocument()
 	err := msg.ReadFromBytes(msgBody)
 	if err != nil {
@@ -126,34 +61,29 @@ func getReply(msgBody []byte) (string, error) {
 
 	root := msg.SelectElement("xml")
 	msgType, _ := _getText(root, "MsgType")
-	var replyMsg ReplyMsg
+	var eventType string
 
-	switch msgType {
-	case MT_TEXT:
-		textMsg := &TextMsg{}
-		textMsg.parse(root)
-		replyMsg = HandleTextMsg(textMsg)
-	case MT_EVENT:
-		eventType, _ := _getText(root, "Event")
-		switch eventType {
-		case ET_VIEW:
-			viewEvent := &ViewEvent{}
-			viewEvent.parse(root)
-			replyMsg = HandleViewEvent(viewEvent)
-		case ET_SUBSCRIBE:
-			subscribeEvent := &SubscribeEvent{}
-			subscribeEvent.parse(root)
-			replyMsg = HandleSubscribeEvent(subscribeEvent)
-		case ET_UNSUBSCRIBE:
-			subscribeEvent := &SubscribeEvent{}
-			subscribeEvent.parse(root)
-			replyMsg = HandleUnsubscribeEvent(subscribeEvent)
-		default:
+	var replyMsg ReplyMsg
+	var receivedMsg ReceivedMsg
+	if msgType != MT_EVENT {
+		if newMessge, ok := newMessages[msgType]; ok {
+			receivedMsg = newMessge()
+			receivedMsg.parse(root)
+			replyMsg = handleReceivedMessage(receivedMsg, msgType)
+		} else {
+			return SUCCESS_TEXT, fmt.Errorf("under implementation for msg type: %s", msgType)
+		}
+	} else {
+		eventType, _ = _getText(root, "Event")
+		if newEvent, ok := newEvents[eventType]; ok {
+			receivedMsg = newEvent()
+			receivedMsg.parse(root)
+			replyMsg = handleReceivedEvent(receivedMsg, eventType)
+		} else {
 			return SUCCESS_TEXT, fmt.Errorf("under implementation for event type: %s", eventType)
 		}
-	default:
-		return SUCCESS_TEXT, fmt.Errorf("under implementation for msg type: %s", msgType)
 	}
+
 	if replyMsg == nil {
 		return SUCCESS_TEXT, nil
 	}
@@ -161,7 +91,7 @@ func getReply(msgBody []byte) (string, error) {
 }
 
 type _replyMsg struct {
-	reply string
+	reply []byte
 	err   error
 }
 type _reqMsg struct {
@@ -191,7 +121,7 @@ func StartWxMsgParsers(workNum int) {
 }
 
 // 根据消息体获取返回消息
-func GetReply(msgBody []byte) (string, error) {
+func GetReply(msgBody []byte) ([]byte, error) {
 	replyChan := make(chan *_replyMsg)
 	_msgChan <- &_reqMsg{msgBody, replyChan}
 
@@ -234,6 +164,7 @@ func ParseMessageBody(u *url.URL, body []byte) ([]byte, string, string, error) {
 		if err != nil {
 			return nil, "", "", err
 		}
+		wxlog.Logf("plain msg: %s\n", string(msg))
 		return msg, args[TIMESTAMP], args[NONCE], nil
 	} else {
 		return nil, "", "", fmt.Errorf("unsupported encrypted method")
