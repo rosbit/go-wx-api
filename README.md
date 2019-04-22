@@ -49,7 +49,7 @@ func main() {
 	// 步骤3. 设置http路由，启动http服务
 	http.HandleFunc(service, wxapi.Echo)     // 用于配置
 	http.HandleFunc(service, wxapi.Request)  // 用于实际执行公众号请求，和wxapi.Echo只能使用一个。
-	                                         // 可以使用高级路由功能同时设置，参考 github.com/rosbit/go-wx-api/samples/wx-echo-server
+	                                         // 可以使用支持高级路由功能的web框架同时设置，参考 github.com/rosbit/go-wx-api/samples/wx-echo-server
 	http.ListenAndServe(fmt.Sprintf(":%d", listenPort), nil)
 }
 ```
@@ -119,8 +119,8 @@ func main() {
 
 		// 步骤3. 设置http路由，启动http服务
 		http.HandleFunc(conf.service, wxService.Echo)     // 用于配置
-		http.HandleFunc(conf.service, wxService.Request)  // 用于实际执行公众号请求，和wxapi.Echo只能使用一个。
-												 // 可以使用高级路由功能同时设置，参考 github.com/rosbit/go-wx-api/samples/wx-echo-server
+		http.HandleFunc(conf.service, wxService.Request)  // 用于实际执行公众号请求，和wxService.Echo只能使用一个。
+		                                                  // 可以使用支持高级路由功能的web框架同时设置
 	}
 
 	http.ListenAndServe(fmt.Sprintf(":%d", listenPort), nil)
