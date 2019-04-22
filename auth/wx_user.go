@@ -14,13 +14,20 @@ type WxUser struct {
 	expireTime int64
 	refreshToken string
 	scope []string
+	wxParams *wxconf.WxParamsT
+}
+
+func NewWxUser(params *wxconf.WxParamsT) *WxUser {
+	if params == nil {
+		return &WxUser{wxParams: &wxconf.WxParams}
+	}
+	return &WxUser{wxParams: params}
 }
 
 // 其实是authorize
 func (user *WxUser) GetOpenId(code string) (string, error) {
 	url := fmt.Sprintf("https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code",
-		wxconf.WxParams.AppId,
-		wxconf.WxParams.AppSecret, code,
+		user.wxParams.AppId, user.wxParams.AppSecret, code,
 	)
 	err := user.getAccessToken(url)
 	if err != nil {
@@ -87,7 +94,7 @@ func (user *WxUser) TokenExpired() bool {
 
 func (user *WxUser) RefreshToken() error {
 	url := fmt.Sprintf("https://api.weixin.qq.com/sns/oauth2/refresh_token?appid=%s&grant_type=refresh_token&refresh_token=%s",
-		wxconf.WxParams.AppId,
+		user.wxParams.AppId,
 		user.refreshToken,
 	)
 	return user.getAccessToken(url)

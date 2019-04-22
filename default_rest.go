@@ -11,9 +11,23 @@ package wxapi
 import (
 	"net/http"
 	"github.com/rosbit/go-wx-api/log"
-	"github.com/rosbit/go-wx-api/msg"
 	"github.com/rosbit/go-wx-api/auth"
 )
+
+// 用于微信服务号设置
+func Echo(w http.ResponseWriter, r *http.Request) {
+	defaultWxHandler.Echo(w, r)
+}
+
+// 微信服务号消息/事件处理入口
+func Request(w http.ResponseWriter, r *http.Request) {
+	defaultWxHandler.Request(w, r)
+}
+
+// 微信网页授权
+func Redirect(w http.ResponseWriter, r *http.Request) {
+	defaultWxHandler.Redirect(w, r)
+}
 
 func _WriteMessage(w http.ResponseWriter, msg string) {
 	w.Write([]byte(msg))
@@ -23,9 +37,8 @@ func _WriteBytes(w http.ResponseWriter, msg []byte) {
 	w.Write(msg)
 }
 
-// 用于微信服务号设置
-func Echo(w http.ResponseWriter, r *http.Request) {
-	wxlog.Logf("wxapi.Echo called: %s\n", r.RequestURI)
+func (wx *WxHandler) Echo(w http.ResponseWriter, r *http.Request) {
+	wxlog.Logf("wxapi.Echo for appId %s called: %s\n", wx.appIdHandler.GetAppId(), r.RequestURI)
 	q := r.URL.Query()
 	echostr := q.Get("echostr")
 	if echostr != "" {
@@ -35,10 +48,9 @@ func Echo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// 微信服务号消息/事件处理入口
-func Request(w http.ResponseWriter, r *http.Request) {
-	wxlog.Logf("wxapi.Request called: %s\n", r.RequestURI)
-	msgBody, timestamp, nonce, err := wxmsg.GetMessageBody(r)
+func (wx *WxHandler) Request(w http.ResponseWriter, r *http.Request) {
+	wxlog.Logf("wxapi.Request for appId %s called: %s\n", wx.appIdHandler.GetAppId(), r.RequestURI)
+	msgBody, timestamp, nonce, err := wx.appMsgParser.GetMessageBody(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
@@ -48,24 +60,23 @@ func Request(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replyMsg, err := wxmsg.GetReply(msgBody)
+	replyMsg, err := wx.appMsgParser.GetReply(msgBody)
 	if err != nil || nonce == "" {
 		_WriteBytes(w, replyMsg)
 		return
 	}
-	_WriteBytes(w, wxmsg.EncryptReply(replyMsg, timestamp, nonce))
+	_WriteBytes(w, wx.appMsgParser.EncryptReply(replyMsg, timestamp, nonce))
 }
 
-// 微信网页授权
-func Redirect(w http.ResponseWriter, r *http.Request) {
-	wxlog.Logf("wxapi.Redirect called: %s\n", r.RequestURI)
+func (wx *WxHandler) Redirect(w http.ResponseWriter, r *http.Request) {
+	wxlog.Logf("wxapi.Redirect for appId %s called: %s\n", wx.appIdHandler.GetAppId(), r.RequestURI)
 	code, state, err := wxauth.ParseRedirectArgs(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	msg, headers, rurl, err := wxauth.AuthRedirect(code, state)
+	msg, headers, rurl, err := wx.appIdHandler.AuthRedirect(code, state)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

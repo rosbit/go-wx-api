@@ -45,8 +45,8 @@ func _PKCS5UnPadding(origData []byte) []byte {
     return origData[:(length - unpadding)]
 }
 
-func decryptMsg(body string, signature string, timestamp string, nonce string) ([]byte, error) {
-	l := []string{wxconf.WxParams.Token, timestamp, nonce, body}
+func decryptMsg(wxParams *wxconf.WxParamsT, body string, signature string, timestamp string, nonce string) ([]byte, error) {
+	l := []string{wxParams.Token, timestamp, nonce, body}
 	hashcode := HashStrings(l)
 	if hashcode != signature {
 		return nil, fmt.Errorf("bad signature")
@@ -56,7 +56,7 @@ func decryptMsg(body string, signature string, timestamp string, nonce string) (
 	if err != nil {
 		return nil, err
 	}
-	key := wxconf.WxParams.AesKey
+	key := wxParams.AesKey
 	aesBlk, err := aes.NewCipher(key)
 	blockSize := aesBlk.BlockSize()
 	iv := key[:blockSize]
@@ -94,7 +94,7 @@ func _msgToPad(msgLen int) []byte {
 	return pad
 }
 
-func encryptMsg(msg []byte, timestamp, nonce string) (string, string) {
+func encryptMsg(wxParams *wxconf.WxParamsT, msg []byte, timestamp, nonce string) (string, string) {
 	randBytes := GetRandomBytes(16)
 	msgLenInNet := make([]byte, 4)
 	binary.BigEndian.PutUint32(msgLenInNet, uint32(len(msg)))
@@ -103,11 +103,11 @@ func encryptMsg(msg []byte, timestamp, nonce string) (string, string) {
 	origData.Write(randBytes)
 	origData.Write(msgLenInNet)
 	origData.Write(msg)
-	origData.WriteString(wxconf.WxParams.AppId)
+	origData.WriteString(wxParams.AppId)
 	pad := _msgToPad(origData.Len())
 	origData.Write(pad)
 
-	key := wxconf.WxParams.AesKey
+	key := wxParams.AesKey
 	block, _ := aes.NewCipher(key)
 	iv := key[:block.BlockSize()]
 	blockMode := cipher.NewCBCEncrypter(block, iv)
@@ -115,5 +115,5 @@ func encryptMsg(msg []byte, timestamp, nonce string) (string, string) {
 	blockMode.CryptBlocks(crypted, origData.Bytes())
 
 	cryptedText := base64.StdEncoding.EncodeToString(crypted)
-	return cryptedText, HashStrings([]string{wxconf.WxParams.Token, timestamp, nonce, cryptedText})
+	return cryptedText, HashStrings([]string{wxParams.Token, timestamp, nonce, cryptedText})
 }

@@ -13,17 +13,25 @@ import (
 type AccessToken struct {
 	accessToken string
 	expireTime int64
+	wxParams *wxconf.WxParamsT
 }
 
 func NewAccessToken() *AccessToken {
-	token := &AccessToken{}
-	token._loadFromStore()
+	return NewAccessTokenWithParams(nil)
+}
+
+func NewAccessTokenWithParams(params *wxconf.WxParamsT) *AccessToken {
+	if params == nil {
+		params = &wxconf.WxParams
+	}
+	token := &AccessToken{wxParams:params}
+	token.loadFromStore()
 	return token
 }
 
 func (token *AccessToken) Get() (string, error) {
-	if token._expired() {
-		err := token._get_access_token()
+	if token.expired() {
+		err := token.get_access_token()
 		if err != nil {
 			return "", err
 		}
@@ -31,14 +39,14 @@ func (token *AccessToken) Get() (string, error) {
 	return token.accessToken, nil
 }
 
-func (token *AccessToken) _expired() bool {
+func (token *AccessToken) expired() bool {
 	return token.expireTime < time.Now().Unix()
 }
 
-func (token *AccessToken) _get_access_token() error {
+func (token *AccessToken) get_access_token() error {
 	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s",
-		wxconf.WxParams.AppId,
-		wxconf.WxParams.AppSecret,
+		token.wxParams.AppId,
+		token.wxParams.AppSecret,
 	)
 	body, err := CallWxAPI(url, "GET", nil)
 	if err != nil {
@@ -51,20 +59,20 @@ func (token *AccessToken) _get_access_token() error {
 	token.accessToken = res.UString("access_token", "")
 	token.expireTime = int64(res.UInt("expires_in", 0)) + time.Now().Unix() - 10
 
-	return token._saveToStore()
+	return token.saveToStore()
 }
 
-func _savePath() string {
-	return fmt.Sprintf("%s/%s", wxconf.TokenStorePath, wxconf.WxParams.AppId)
+func (token *AccessToken) savePath() string {
+	return fmt.Sprintf("%s/%s", wxconf.TokenStorePath, token.wxParams.AppId)
 }
 
-func (token *AccessToken) _saveToStore() error {
+func (token *AccessToken) saveToStore() error {
 	if _, err := os.Stat(wxconf.TokenStorePath); os.IsNotExist(err) {
 		if err = os.MkdirAll(wxconf.TokenStorePath, 0755); err != nil {
 			return err
 		}
 	}
-	savePath := _savePath()
+	savePath := token.savePath()
 	fp, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -79,8 +87,8 @@ func (token *AccessToken) _saveToStore() error {
 	return nil
 }
 
-func (token *AccessToken) _loadFromStore() {
-	savePath := _savePath()
+func (token *AccessToken) loadFromStore() {
+	savePath := token.savePath()
 	j, err := ioutil.ReadFile(savePath)
 	if err != nil {
 		return

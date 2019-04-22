@@ -20,15 +20,30 @@ var (
 	TokenStorePath string
 )
 
-func SetAesKey(aesKey string) error {
+func (params *WxParamsT) SetAesKey(aesKey string) error {
 	var err error
-	if WxParams.AesKey, err = base64.StdEncoding.DecodeString(fmt.Sprintf("%s=", aesKey)); err != nil {
+	if params.AesKey, err = base64.StdEncoding.DecodeString(fmt.Sprintf("%s=", aesKey)); err != nil {
 		return err
 	}
-	if len(WxParams.AesKey) != 32 {
+	if len(params.AesKey) != 32 {
 		return fmt.Errorf("invalid wxAESKey length")
 	}
 	return nil
+}
+
+func NewWxParams(token, appId, appSecret, aesKey string) (*WxParamsT, error) {
+	params := &WxParamsT{Token:token, AppId:appId, AppSecret:appSecret}
+	if aesKey == "" {
+		return params, nil
+	}
+	if err := params.SetAesKey(aesKey); err != nil {
+		return nil, err
+	}
+	return params, nil
+}
+
+func SetAesKey(aesKey string) error {
+	return WxParams.SetAesKey(aesKey)
 }
 
 func SetParams(token, appId, appSecret, aesKey string) error {
@@ -37,5 +52,6 @@ func SetParams(token, appId, appSecret, aesKey string) error {
 		WxParams.AesKey = nil
 		return nil
 	}
-	return SetAesKey(aesKey)
+	return WxParams.SetAesKey(aesKey)
 }
+

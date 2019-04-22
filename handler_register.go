@@ -15,9 +15,7 @@ import (
  * @msgHandler  消息处理器
  */
 func RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
-	if msgHandler != nil {
-		wxmsg.MsgHandler = msgHandler
-	}
+	defaultWxHandler.RegisterWxMsghandler(msgHandler)
 }
 
 /**
@@ -30,11 +28,23 @@ func RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
  *   r    需要通过302跳转的URL。如果r不是空串，c的内容被忽略
  *   err  如果没有错误返回nil，非nil表示错误
  */
-type RedirectHandler func(openId, state string) (c string, h map[string]string, r string, err error)
+type RedirectHandler = wxauth.RedirectHandlerWithoutAppId
+//type RedirectHandler func(openId, state string) (c string, h map[string]string, r string, err error)
 
 /**
  * 注册微信网页授权处理函数
  */
 func RegisterRedictHandler(handler RedirectHandler) {
-	wxauth.HandleRedirect = handler
+	if handler != nil {
+		defaultWxHandler.RegisterRedictHandler(wxauth.ToAppIdRedirectHandler(handler))
+	}
+}
+
+// ---------------- 支持多服务号 ------------------
+func (h *WxHandler) RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
+	h.appMsgParser.RegisterWxMsgHandler(msgHandler)
+}
+
+func (h *WxHandler) RegisterRedictHandler(handler wxauth.RedirectHandler) {
+	h.appIdHandler.RegisterRedictHandler(handler)
 }

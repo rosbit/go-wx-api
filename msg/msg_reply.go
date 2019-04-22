@@ -116,8 +116,8 @@ func executeTmpl(tmplIdx int, data interface{}) []byte {
 }
 
 // 根据响应消息生成加密消息
-func EncryptReply(replyMsg []byte, timestamp string, nonce string) []byte {
-	cryptedText, signature := encryptMsg(replyMsg, timestamp, nonce)
+func (p *WxAppIdMsgParser) EncryptReply(replyMsg []byte, timestamp string, nonce string) []byte {
+	cryptedText, signature := encryptMsg(p.wxParams, replyMsg, timestamp, nonce)
 	return executeTmpl(RTN_ENCRYPTED_REPLY, map[string]string{
 		"encryptedText": cryptedText,
 		"signature": signature,
@@ -258,7 +258,7 @@ type NewsArticle struct {
      Url    string
 }
 
-func newNewsArticle(title, desc, picUrl, url string) *NewsArticle {
+func NewNewsArticle(title, desc, picUrl, url string) *NewsArticle {
 	return &NewsArticle {
 		Title:title,
 		Desc:desc,

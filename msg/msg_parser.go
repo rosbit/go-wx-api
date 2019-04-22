@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"github.com/rosbit/go-wx-api/log"
+	"github.com/rosbit/go-wx-api/conf"
 )
 
 var SUCCESS_TEXT = []byte("success")
@@ -52,7 +53,7 @@ var newEvents = map[string]func()ReceivedMsg {
 }
 
 // 消息/事件主处理流程：分析消息内容、根据消息类型触发消息处理函数、返回结果消息
-func getReply(msgBody []byte) ([]byte, error) {
+func (p *WxAppIdMsgParser) getReply(msgBody []byte) ([]byte, error) {
 	msg := etree.NewDocument()
 	err := msg.ReadFromBytes(msgBody)
 	if err != nil {
@@ -69,7 +70,7 @@ func getReply(msgBody []byte) ([]byte, error) {
 		if newMessge, ok := newMessages[msgType]; ok {
 			receivedMsg = newMessge()
 			receivedMsg.parse(root)
-			replyMsg = handleReceivedMessage(receivedMsg, msgType)
+			replyMsg = p.handleReceivedMessage(receivedMsg, msgType)
 		} else {
 			return SUCCESS_TEXT, fmt.Errorf("under implementation for msg type: %s", msgType)
 		}
@@ -78,7 +79,7 @@ func getReply(msgBody []byte) ([]byte, error) {
 		if newEvent, ok := newEvents[eventType]; ok {
 			receivedMsg = newEvent()
 			receivedMsg.parse(root)
-			replyMsg = handleReceivedEvent(receivedMsg, eventType)
+			replyMsg = p.handleReceivedEvent(receivedMsg, eventType)
 		} else {
 			return SUCCESS_TEXT, fmt.Errorf("under implementation for event type: %s", eventType)
 		}
@@ -99,31 +100,47 @@ type _reqMsg struct {
 	replyChan chan *_replyMsg
 }
 
-var _msgChan chan *_reqMsg
+type WxAppIdMsgParser struct {
+	wxParams *wxconf.WxParamsT
+	msgChan chan *_reqMsg
+
+	messageHandlers map[string]FnMessageHandler
+	eventHandlers   map[string]FnMessageHandler
+}
 
 // 消息解析线程，被GetReply()触发，通过getReply()完成实际的消息处理
-func msgParser() {
+func (p *WxAppIdMsgParser) msgParser() {
 	for {
-		reqMsg := <-_msgChan
+		reqMsg := <-p.msgChan
 		msgBody, replyChan := reqMsg.msgBody, reqMsg.replyChan
 
-		reply, err := getReply(msgBody)
+		reply, err := p.getReply(msgBody)
 		replyChan <- &_replyMsg{reply, err}
 	}
 }
 
 // 初始化应用时启动若干个消息解析线程
-func StartWxMsgParsers(workNum int) {
-	_msgChan = make(chan *_reqMsg, workNum)
-	for i:=0; i<workNum; i++ {
-		go msgParser()
+func StartWxMsgParsers(params *wxconf.WxParamsT, workNum int) *WxAppIdMsgParser {
+	p := &WxAppIdMsgParser{}
+	if params == nil {
+		p.wxParams = &wxconf.WxParams
+	} else {
+		p.wxParams = params
 	}
+	p.RegisterWxMsgHandler(MsgHandler) // set default msg handler.
+
+	p.msgChan = make(chan *_reqMsg, workNum)
+	for i:=0; i<workNum; i++ {
+		go p.msgParser()
+	}
+
+	return p
 }
 
 // 根据消息体获取返回消息
-func GetReply(msgBody []byte) ([]byte, error) {
+func (p *WxAppIdMsgParser) GetReply(msgBody []byte) ([]byte, error) {
 	replyChan := make(chan *_replyMsg)
-	_msgChan <- &_reqMsg{msgBody, replyChan}
+	p.msgChan <- &_reqMsg{msgBody, replyChan}
 
 	replyMsg := <-replyChan
 	close(replyChan)
@@ -142,7 +159,7 @@ func getEncryptedMsg(body []byte) (string, error) {
 }
 
 // 从GetMessageBody()独立出来，可以通过各种方式调用，方便调试
-func ParseMessageBody(u *url.URL, body []byte) ([]byte, string, string, error) {
+func parseMessageBody(wxParams *wxconf.WxParamsT, u *url.URL, body []byte) ([]byte, string, string, error) {
 	query := u.Query()
 	encrypt_type := query.Get("encrypt_type")
 	if encrypt_type == "" {
@@ -160,7 +177,7 @@ func ParseMessageBody(u *url.URL, body []byte) ([]byte, string, string, error) {
 		}
 
 		msg_signature := query.Get("msg_signature")
-		msg, err := decryptMsg(eBody, msg_signature, args[TIMESTAMP], args[NONCE])
+		msg, err := decryptMsg(wxParams, eBody, msg_signature, args[TIMESTAMP], args[NONCE])
 		if err != nil {
 			return nil, "", "", err
 		}
@@ -171,8 +188,13 @@ func ParseMessageBody(u *url.URL, body []byte) ([]byte, string, string, error) {
 	}
 }
 
+// 使用缺省配置解析消息，可以用于调试
+func ParseMessageBody(u *url.URL, body []byte) ([]byte, string, string, error) {
+	return parseMessageBody(&wxconf.WxParams, u, body)
+}
+
 // 获取服务号收到的消息参数，返回 (消息体, 时间戳, nonce, error)
-func GetMessageBody(r *http.Request) ([]byte, string, string, error) {
+func (p *WxAppIdMsgParser) GetMessageBody(r *http.Request) ([]byte, string, string, error) {
 	if r.Body == nil {
 		return nil, "", "", fmt.Errorf("body expected")
 	}
@@ -183,5 +205,5 @@ func GetMessageBody(r *http.Request) ([]byte, string, string, error) {
 	r.Body.Close()
 	wxlog.Logf("body: %s\n", string(body))
 
-	return ParseMessageBody(r.URL, body)
+	return parseMessageBody(p.wxParams, r.URL, body)
 }
