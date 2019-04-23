@@ -122,9 +122,9 @@ func main() {
 	// 步骤2. 初始化SDK
 	wxapi.InitWxAPI(workerNum, os.Stdout)
 
-    // 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
-    wxapi.RegisterWxMsghandler(&YourMsgHandler{})
-    wxapi.RegisterRedictHandler(handleMenuRedirect)
+	// 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
+	wxapi.RegisterWxMsghandler(&YourMsgHandler{})
+	wxapi.RegisterRedictHandler(handleMenuRedirect)
 
 	// 步骤2.5 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
 	// signatureChecker := wxapi.NewWxSignatureChecker(wxconf.WxParams.Token, 0, []string{service})
@@ -197,9 +197,9 @@ func main() {
 		// 步骤2. 初始化SDK
 		wxService := wxapi.InitWxAPIWithParams(wxParams, conf.workerNum, os.Stdout)
 
-        // 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
-        wxService.RegisterWxMsghandler(&YourMsgHandler{})   // 不同的wxService可以有不同的MsgHandler
-        wxService.RegisterRedictHandler(handleMenuRedirect) // 不同的wxSercice可以有不同的RedirectHandler
+		// 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
+		wxService.RegisterWxMsghandler(&YourMsgHandler{})   // 不同的wxService可以有不同的MsgHandler
+		wxService.RegisterRedictHandler(handleMenuRedirect) // 不同的wxSercice可以有不同的RedirectHandler
 
 		// 步骤2.5 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
 		// signatureChecker := wxapi.NewWxSignatureChecker(wxParams.Token, 0, []string{conf.service})
