@@ -73,7 +73,7 @@ func (token *AccessToken) saveToStore() error {
 		}
 	}
 	savePath := token.savePath()
-	fp, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0644)
+	fp, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
