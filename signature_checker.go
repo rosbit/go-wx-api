@@ -15,7 +15,7 @@ import (
 /**
  * 创建http处理中间件，验证消息签名，如果非法直接返回错误
  * @param wxToken      公众号在微信管理后台定义的token
- * @param timeout      消失时间戳超时处理，秒数，如果<=0不检查时间戳
+ * @param timeout      消息时间戳超时处理，秒数，如果<=0不检查时间戳
  * @param uriPrefixes  需要检查签名的URI前缀列表，不相关的URI忽略检查；如果为nil，全部检查
  */
 func NewWxSignatureChecker(wxToken string, timeout int, uriPrefixes []string) func(http.ResponseWriter, *http.Request, http.HandlerFunc) {

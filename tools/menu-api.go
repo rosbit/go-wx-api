@@ -3,17 +3,18 @@ package wxtools
 import (
 	"fmt"
 	"net/url"
-	"io/ioutil"
+	"os"
 	"github.com/rosbit/go-wx-api/auth"
 )
 
 func CreateMenu(accessToken string, menuJsonFile string) ([]byte, error) {
-	menuJson, err := ioutil.ReadFile(menuJsonFile)
+	fpMenuJson, err := os.Open(menuJsonFile)
 	if err != nil {
 		return nil, err
 	}
+	defer fpMenuJson.Close()
 	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/menu/create?access_token=%s", accessToken)
-	return wxauth.CallWxAPI(url, "POST", menuJson)
+	return wxauth.JsonCall(url, "POST", fpMenuJson)
 }
 
 func QueryMenu(accessToken string) ([]byte, error) {

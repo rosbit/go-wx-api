@@ -6,7 +6,15 @@ import (
 )
 
 func CallWxAPI(url string, method string, postData interface{}) ([]byte, error) {
-	status, content, _, err := wget.Wget(url, method, postData, nil)
+	return callWget(url, method, postData, wget.Wget)
+}
+
+func JsonCall(url string, method string, jsonData interface{}) ([]byte, error) {
+	return callWget(url, method, jsonData, wget.PostJson)
+}
+
+func callWget(url string, method string, postData interface{}, fnCall wget.HttpFunc) ([]byte, error) {
+	status, content, _, err := fnCall(url, method, postData, nil)
 	if err != nil {
 		return nil, err
 	}
