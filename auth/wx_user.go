@@ -3,10 +3,22 @@ package wxauth
 import (
 	"fmt"
 	"time"
-	"github.com/olebedev/config"
 	"strings"
+	"encoding/json"
 	"github.com/rosbit/go-wx-api/conf"
 )
+
+type WxUserInfo struct {
+	OpenId   string `json:"openid"`
+	Nickname string `json:"nickname"`
+	Sex      string `json:"sex"`
+	Province string `json:"province"`
+	City     string `json:"city"`
+	Country  string `json:"country"`
+	HeadImgUrl string  `json:"headimgurl"`
+	Privilege []string `json:"privilege"`
+	UnionId   string   `json:"unionid"`
+}
 
 type WxUser struct {
 	openId string
@@ -15,6 +27,8 @@ type WxUser struct {
 	refreshToken string
 	scope []string
 	wxParams *wxconf.WxParamsT
+
+	UserInfo WxUserInfo
 }
 
 func NewWxUser(params *wxconf.WxParamsT) *WxUser {
@@ -36,8 +50,6 @@ func (user *WxUser) GetOpenId(code string) (string, error) {
 	return user.openId, nil
 }
 
-var _userFields = []string{"nickname", "sex", "province", "city", "country", "headimgurl", "privilege", "unionid"}
-
 /*
 get user info with OAuth2 API.
 please call this method after calling getOpenId().
@@ -48,22 +60,17 @@ func (user *WxUser) GetInfo() error {
 	if err != nil {
 		return err
 	}
-	j, err := config.ParseJson(string(body))
-	if err != nil {
+	var res map[string]interface{}
+	if err = json.Unmarshal(body, &res); err != nil {
 		return err
 	}
-	if errcode, err := j.Int("errcode"); err != nil {
-		errMsg := j.UString("errmsg", "")
+	if errcode, ok := res["errcode"]; ok {
+		errMsg, _ := res["errmsg"]
 		return fmt.Errorf("%v: %v", errcode, errMsg)
 	}
-	user.setUserInfo(j)
-	return nil
-}
 
-func (user *WxUser) setUserInfo(res *config.Config) {
-	for _, field := range _userFields {
-		fmt.Printf("userInfo: %s", field)
-	}
+	json.Unmarshal(body, &user.UserInfo)
+	return nil
 }
 
 func (user *WxUser) getAccessToken(url string) error {
@@ -72,19 +79,30 @@ func (user *WxUser) getAccessToken(url string) error {
 		return err
 	}
 	fmt.Printf("get accessToken ok, res: %v\n", string(res))
-	j, err := config.ParseJson(string(res))
-	if err != nil {
+
+	var j map[string]interface{}
+	if err = json.Unmarshal(res, j); err != nil {
 		return err
 	}
-	if errcode, err := j.Int("errcode"); err == nil {
-		errMsg := j.UString("errmsg", "")
+	if errcode, ok := j["errcode"]; ok  {
+		errMsg, _ := j["errmsg"]
 		return fmt.Errorf("%v: %v", errcode, errMsg)
 	}
-	user.openId = j.UString("openid", "")
-	user.accessToken = j.UString("access_token", "")
-	user.expireTime = time.Now().Unix() + int64(j.UInt("expires_in")) - 10
-	user.refreshToken = j.UString("refresh_token", "")
-	user.scope = strings.Split(j.UString("scope", ""), ",")
+
+	var token struct {
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int    `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+		OpenId       string `json:"openid"`
+		Scope        string `json:"scope"`
+	}
+	json.Unmarshal(res, &token)
+
+	user.openId       = token.OpenId
+	user.accessToken  = token.AccessToken
+	user.expireTime   = time.Now().Unix() + int64(token.ExpiresIn) - 10
+	user.refreshToken = token.RefreshToken
+	user.scope        = strings.Split(token.Scope, ",")
 	return nil
 }
 

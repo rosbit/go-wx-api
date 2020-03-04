@@ -2,11 +2,9 @@ package wxauth
 
 import (
 	"time"
-	"github.com/olebedev/config"
 	"fmt"
 	"os"
 	"encoding/json"
-	"io/ioutil"
 	"github.com/rosbit/go-wx-api/conf"
 )
 
@@ -52,12 +50,15 @@ func (token *AccessToken) get_access_token() error {
 	if err != nil {
 		return err
 	}
-	res, err := config.ParseJson(string(body))
-	if err != nil {
+	var res struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in"`
+	}
+	if err = json.Unmarshal(body, &res); err != nil {
 		return err
 	}
-	token.accessToken = res.UString("access_token", "")
-	token.expireTime = int64(res.UInt("expires_in", 0)) + time.Now().Unix() - 10
+	token.accessToken = res.AccessToken
+	token.expireTime =  res.ExpiresIn + time.Now().Unix() - 10
 
 	return token.saveToStore()
 }
@@ -89,18 +90,20 @@ func (token *AccessToken) saveToStore() error {
 
 func (token *AccessToken) loadFromStore() {
 	savePath := token.savePath()
-	j, err := ioutil.ReadFile(savePath)
+	fp, err := os.Open(savePath)
 	if err != nil {
 		return
 	}
-	var t map[string]interface{}
-	if err := json.Unmarshal(j, &t); err != nil {
+	defer fp.Close()
+
+	var j struct {
+		Token  string `json:"token"`
+		Expire int64  `json:"expire"`
+	}
+	dec := json.NewDecoder(fp)
+	if err = dec.Decode(&j); err != nil {
 		return
 	}
-	if at, ok := t["token"]; ok {
-		token.accessToken = at.(string)
-	}
-	if et, ok := t["expire"]; ok {
-		token.expireTime = int64(et.(float64))
-	}
+
+	token.accessToken, token.expireTime = j.Token, j.Expire
 }

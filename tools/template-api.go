@@ -2,8 +2,6 @@ package wxtools
 
 import (
 	"fmt"
-	"net/url"
-	"io/ioutil"
 	"github.com/rosbit/go-wx-api/auth"
 )
 
@@ -21,7 +19,7 @@ func QueryTemplateIndustry(accessToken string) ([]byte, error) {
 }
 
 func SendTemplateMessage(accessToken string, toUser string, templateId string, data map[string]interface{}) ([]byte, error) {
-	dData = make(map[string]interface{})
+	dData := make(map[string]interface{})
 	for k,v := range data {
 		dData[k] = map[string]string{"value": fmt.Sprintf("%v", v)}
 	}
@@ -31,7 +29,7 @@ func SendTemplateMessage(accessToken string, toUser string, templateId string, d
 		"template_id": templateId,
 		"data": dData,
 	}
-	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s", accessTokenToken)
+	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s", accessToken)
 	return wxauth.JsonCall(url, "POST", d)
 }
 
