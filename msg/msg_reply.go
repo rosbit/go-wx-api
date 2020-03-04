@@ -126,7 +126,7 @@ func (p *WxAppIdMsgParser) EncryptReply(replyMsg []byte, timestamp string, nonce
 	})
 }
 
-// 响应消息序列化XML接口定义
+// 所有响应消息都必须实现的接口：序列化为XML。由此消息处理过程为 ReceiveMsg -> [处理] -> ReplyMsg
 type ReplyMsg interface {
 	ToXML() []byte
 }

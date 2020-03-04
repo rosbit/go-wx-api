@@ -26,6 +26,7 @@ const (
 	ET_CLICK = "CLICK"
 	ET_SUBSCRIBE   = "subscribe"
 	ET_UNSUBSCRIBE = "unsubscribe"
+	ET_SCAN        = "SCAN"  // SCAN事件内容和subscribe是一样的，注意和scancode_xxx事件的区分
 	ET_WHERE       = "location" // 由location_select菜单引起的事件
 	ET_LOCATION    = "LOCATION"
 	ET_PIC_SYSPHOTO       = "pic_sysphoto"
@@ -45,6 +46,7 @@ func _getText(el *etree.Element, tagName string) (string, error) {
 	return t.Text(), nil
 }
 
+// 所有接收消息都实现的接口。消息处理可以统一为 ReceivedMsg -> [处理] -> ReplyMsg
 type ReceivedMsg interface {
 	parse(root *etree.Element)
 }
@@ -195,7 +197,7 @@ func (m *ViewEvent) parse(root *etree.Element) {
 	m.MenuId, _   = _getText(root, "MenuId")
 }
 
-// ---- event subscribe, unsubscribe ----
+// ---- event subscribe, unsubscribe, SCAN ----
 type SubscribeEvent struct {
 	EventMsg
 	EventKey string
@@ -279,14 +281,14 @@ func (m *LocationEvent) parse(root *etree.Element) {
 }
 
 // ---- event scancode_waitmsg, scancode_push ----
-type ScanEvent struct {
+type ScancodeEvent struct {
 	EventMsg
 	EventKey   string
 	ScanType   string
 	ScanResult string
 }
 
-func (m *ScanEvent) parse(root *etree.Element) {
+func (m *ScancodeEvent) parse(root *etree.Element) {
 	m.EventMsg.parse(root)
 	m.EventKey, _   = _getText(root, "EventKey")
 	scanCodeInfo   := root.SelectElement("ScanCodeInfo")

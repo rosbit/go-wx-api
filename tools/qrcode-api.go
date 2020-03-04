@@ -53,29 +53,30 @@ func createForeverQr(accessToken string, sceneId interface{}, action, idName str
 
 func createQr(accessToken string, params map[string]interface{}) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
 	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s", accessToken)
-	var postData []byte
 	var resp []byte
-	if postData, err = json.Marshal(params); err != nil {
+	if resp, err = wxauth.JsonCall(url, "POST", params); err != nil {
 		return
 	}
-	if resp, err = wxauth.CallWxAPI(url, "POST", postData); err != nil {
-		return
+
+	var res struct {
+		Ticket        string `json:"ticket"`
+		ExpireSeconds int    `json:"expire_seconds"`
+		Url           string `json:"url"`
 	}
-	var res map[string]interface{}
 	if err = json.Unmarshal(resp, &res); err != nil {
 		return
 	}
-	if ticket, ok := res["ticket"]; !ok {
+
+	if res.Ticket == "" {
 		err = fmt.Errorf("no ticket item found in result")
 		return
-	} else {
-		ticketURL2ShowQrCode = fmt.Sprintf("https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=%s", ticket.(string))
 	}
-	if urlInQrcode, ok := res["url"]; !ok {
+	ticketURL2ShowQrCode = fmt.Sprintf("https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=%s", res.Ticket)
+
+	if res.Url == "" {
 		err = fmt.Errorf("no url item found in result")
 		return
-	} else {
-		urlIncluedInQrcode = urlInQrcode.(string)
 	}
+	urlIncluedInQrcode = res.Url
 	return
 }

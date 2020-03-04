@@ -17,10 +17,11 @@ type WxMsgHandler interface {
 	HandleLinkMsg(linkMsg *LinkMsg) ReplyMsg
 	HandleClickEvent(clickEvent *ClickEvent) ReplyMsg
 	HandleViewEvent(viewEvent *ViewEvent) ReplyMsg
-	HandleScanEvent(scanEvent *ScanEvent) ReplyMsg
-	HandleScanWaitEvent(scanEvent *ScanEvent)ReplyMsg
+	HandleScancodePushEvent(scanEvent *ScancodeEvent) ReplyMsg
+	HandleScancodeWaitEvent(scanEvent *ScancodeEvent)ReplyMsg
 	HandleSubscribeEvent(subscribeEvent *SubscribeEvent) ReplyMsg
 	HandleUnsubscribeEvent(subscribeEvent *SubscribeEvent) ReplyMsg
+	HandleScanEvent(subscribeEvent *SubscribeEvent) ReplyMsg
 	HandleWhereEvent(whereEvent *WhereEvent) ReplyMsg
 	HandlePhotoEvent(phoneEvent *PhotoEvent) ReplyMsg
 	HandleLocationEvent(locEvent *LocationEvent) ReplyMsg
@@ -70,11 +71,11 @@ func (h *WxMsgHandlerAdapter) HandleViewEvent(viewEvent *ViewEvent) ReplyMsg {
 	return NewSuccessMsg()
 }
 
-func (h *WxMsgHandlerAdapter) HandleScanEvent(scanEvent *ScanEvent) ReplyMsg {
+func (h *WxMsgHandlerAdapter) HandleScancodePushEvent(scanEvent *ScancodeEvent) ReplyMsg {
 	return NewSuccessMsg()
 }
 
-func (h *WxMsgHandlerAdapter) HandleScanWaitEvent(scanEvent *ScanEvent) ReplyMsg {
+func (h *WxMsgHandlerAdapter) HandleScancodeWaitEvent(scanEvent *ScancodeEvent) ReplyMsg {
 	return NewReplyTextMsg(scanEvent.FromUserName, scanEvent.ToUserName, fmt.Sprintf("scan result: %s, %s", scanEvent.ScanType, scanEvent.ScanResult))
 }
 
@@ -83,6 +84,10 @@ func (h *WxMsgHandlerAdapter) HandleSubscribeEvent(subscribeEvent *SubscribeEven
 }
 
 func (h *WxMsgHandlerAdapter) HandleUnsubscribeEvent(subscribeEvent *SubscribeEvent) ReplyMsg {
+	return NewSuccessMsg()
+}
+
+func (h *WxMsgHandlerAdapter) HandleScanEvent(subscribeEvent *SubscribeEvent) ReplyMsg {
 	return NewSuccessMsg()
 }
 
@@ -141,13 +146,14 @@ func (p *WxAppIdMsgParser) RegisterWxMsgHandler(msgHandler WxMsgHandler) {
 		ET_CLICK: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleClickEvent(receivedMsg.(*ClickEvent)) },
 		ET_SUBSCRIBE:   func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleSubscribeEvent(receivedMsg.(*SubscribeEvent)) },
 		ET_UNSUBSCRIBE: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleUnsubscribeEvent(receivedMsg.(*SubscribeEvent)) },
+		ET_SCAN: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleScanEvent(receivedMsg.(*SubscribeEvent)) },
 		ET_WHERE:    func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleWhereEvent(receivedMsg.(*WhereEvent)) },
 		ET_LOCATION: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleLocationEvent(receivedMsg.(*LocationEvent)) },
 		ET_PIC_SYSPHOTO: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandlePhotoEvent(receivedMsg.(*PhotoEvent)) },
 		ET_PIC_PHOTO_OR_ALBUM: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandlePhotoEvent(receivedMsg.(*PhotoEvent)) },
 		ET_PIC_WEIXIN: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandlePhotoEvent(receivedMsg.(*PhotoEvent)) },
-		ET_SCANCODE_WAITMSG: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleScanWaitEvent(receivedMsg.(*ScanEvent)) },
-		ET_SCANCODE_PUSH: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleScanEvent(receivedMsg.(*ScanEvent)) },
+		ET_SCANCODE_WAITMSG: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleScancodeWaitEvent(receivedMsg.(*ScancodeEvent)) },
+		ET_SCANCODE_PUSH: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleScancodePushEvent(receivedMsg.(*ScancodeEvent)) },
 		ET_MASSSENDJOBFINISH:func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleMassSentEvent(receivedMsg.(*MassSentEvent)) },
 		ET_TEMPLATESENDJOBFINISH: func(receivedMsg ReceivedMsg) ReplyMsg { return msgHandler.HandleTemplateSentEvent(receivedMsg.(*TemplateSentEvent)) },
 	}
