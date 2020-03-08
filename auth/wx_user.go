@@ -81,7 +81,7 @@ func (user *WxUser) getAccessToken(url string) error {
 	fmt.Printf("get accessToken ok, res: %v\n", string(res))
 
 	var j map[string]interface{}
-	if err = json.Unmarshal(res, j); err != nil {
+	if err = json.Unmarshal(res, &j); err != nil {
 		return err
 	}
 	if errcode, ok := j["errcode"]; ok  {
