@@ -3,13 +3,19 @@
  * 工作方式:
  *   1. wxapi.ParseRedirectArgs(*http.Request)用于解析微信授权网页的code和state参数
  *   2. wxapi.AuthRedirect(code, state)用于处理结果
+ *   3. wxapi.AuthRedirectUrl(http.ResponseWriter, *http.Request, code, state)用于全权处理网页授权，优先级高于AuthRediret()
  */
 package wxauth
 
 import (
-	"net/http"
-	"fmt"
 	"github.com/rosbit/go-wx-api/conf"
+	"net/http/httputil"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"bytes"
+	"fmt"
 )
 
 type _redirectRes struct {
@@ -29,11 +35,16 @@ type WxAppIdAuthHandler struct {
 	wxParams *wxconf.WxParamsT
 	reqs chan *_redirectData
 
+	redirectUrl     string          // 转发处理URL，**如果存在，下面的redirectHandler将被忽略**
 	redirectHandler RedirectHandler // 转发处理程序，参见auth_redictor.go
 }
 
 func (handler *WxAppIdAuthHandler) GetAppId() string {
 	return handler.wxParams.AppId
+}
+
+func (handler *WxAppIdAuthHandler) HasRedirectUrl() bool {
+	return len(handler.redirectUrl) > 0
 }
 
 // 微信网页授权处理线程，输入请求被AuthRedirect()触发
@@ -89,6 +100,29 @@ func ParseRedirectArgs(r *http.Request) (string, string, error) {
 		}
 	}
 	return args[CODE], args[STATE], nil
+}
+
+// 网页授权全权转发给redirectUrl
+func (handler *WxAppIdAuthHandler) AuthRedirectUrl(w http.ResponseWriter, r *http.Request, code, state string) {
+	b := &bytes.Buffer{}
+	json.NewEncoder(b).Encode(map[string]string{
+		"appId": handler.wxParams.AppId,
+		"code": code,
+		"state": state,
+	})
+	forwarder := func()*httputil.ReverseProxy{
+		return &httputil.ReverseProxy{
+			Director: func(r *http.Request) {
+				r.Method = http.MethodPost
+				r.URL, _ = url.Parse(handler.redirectUrl)
+				r.Body = ioutil.NopCloser(b)
+				r.ContentLength = int64(b.Len())
+				r.Header.Set("Content-Type", "application/json")
+			},
+		}
+	}()
+
+	forwarder.ServeHTTP(w, r)
 }
 
 // 获取微信网页授权的处理结果，分别返回 [网页内容(非空), 需要设置的header, 跳转的url(非空), error]

@@ -76,6 +76,11 @@ func (wx *WxHandler) Redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if wx.appIdHandler.HasRedirectUrl() {
+		wx.appIdHandler.AuthRedirectUrl(w, r, code, state)
+		return
+	}
+
 	msg, headers, rurl, err := wx.appIdHandler.AuthRedirect(code, state)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -40,6 +40,14 @@ func RegisterRedictHandler(handler RedirectHandler) {
 	}
 }
 
+// 注册转发HTTP(s) URL，该URL将全权决定网页授权的处理。如果该URL存在，优先级要"高于"RegisterRedictHandler()注册函数。
+// 参数JSON: {"appId": "xxx", "openId": "xxx", "state": "state"}
+// 该URL的以POST形式接收参数，而且会得到所有的HTTP头信息，可以设置任何的响应头信息，响应结果直接显示在公众号浏览器中
+// 响应时间要控制好，避免微信服务超时
+func RegisterRedirectUrl(redirectUrl string) {
+	defaultWxHandler.RegisterRedirectUrl(redirectUrl)
+}
+
 // ---------------- 支持多服务号 ------------------
 func (h *WxHandler) RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
 	h.appMsgParser.RegisterWxMsgHandler(msgHandler)
@@ -47,4 +55,12 @@ func (h *WxHandler) RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
 
 func (h *WxHandler) RegisterRedictHandler(handler wxauth.RedirectHandler) {
 	h.appIdHandler.RegisterRedictHandler(handler)
+}
+
+// 注册转发HTTP(s) URL，该URL将全权决定网页授权的处理。如果该URL存在，优先级要"高于"RegisterRedictHandler()注册函数。
+// 参数JSON: {"appId": "xxx", "openId": "xxx", "state": "state"}
+// 该URL的以POST形式接收参数，而且会得到所有的HTTP头信息，可以设置任何的响应头信息，响应结果直接显示在公众号浏览器中
+// 响应时间要控制好，避免微信服务超时
+func (h *WxHandler) RegisterRedirectUrl(redirectUrl string) {
+	h.appIdHandler.RegisterRedirectUrl(redirectUrl)
 }
