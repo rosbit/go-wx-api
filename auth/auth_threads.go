@@ -28,6 +28,8 @@ type _redirectRes struct {
 type _redirectData struct {
 	code string
 	state string
+	w  http.ResponseWriter
+	r *http.Request
 	result chan *_redirectRes
 }
 
@@ -47,6 +49,46 @@ func (handler *WxAppIdAuthHandler) HasRedirectUrl() bool {
 	return len(handler.redirectUrl) > 0
 }
 
+func (handler *WxAppIdAuthHandler) redirect(req *_redirectData, wxUser *WxUser) {
+	code, state, w, r := req.code, req.state, req.w, req.r
+
+	openId, err := wxUser.GetOpenId(code) // 根据请求code获取用户的openId
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = wxUser.GetInfo()
+
+	b := &bytes.Buffer{}
+	json.NewEncoder(b).Encode(map[string]interface{}{
+		"appId": handler.wxParams.AppId,
+		"openId": openId,
+		"state": state,
+		"userInfo": &(wxUser.UserInfo),
+		"userInfoError": func(err error)string{
+			if err == nil {
+				return ""
+			} else {
+				return err.Error()
+			}
+		}(err),
+	})
+
+	forwarder := func()*httputil.ReverseProxy{
+		return &httputil.ReverseProxy{
+			Director: func(r *http.Request) {
+				r.Method = http.MethodPost
+				r.URL, _ = url.Parse(handler.redirectUrl)
+				r.Body = ioutil.NopCloser(b)
+				r.ContentLength = int64(b.Len())
+				r.Header.Set("Content-Type", "application/json")
+			},
+		}
+	}()
+
+	forwarder.ServeHTTP(w, r)
+}
+
 // 微信网页授权处理线程，输入请求被AuthRedirect()触发
 func (handler *WxAppIdAuthHandler) authThread() {
 	wxUser := NewWxUser(handler.wxParams)
@@ -54,6 +96,12 @@ func (handler *WxAppIdAuthHandler) authThread() {
 
 	for {
 		req := <-handler.reqs
+		if req.w != nil {
+			handler.redirect(req, wxUser)
+			req.result <- nil
+			continue
+		}
+
 		openId, err := wxUser.GetOpenId(req.code) // 根据请求code获取用户的openId
 		if err != nil {
 			req.result <- &_redirectRes{"", nil, "", err}
@@ -104,42 +152,17 @@ func ParseRedirectArgs(r *http.Request) (string, string, error) {
 
 // 网页授权全权转发给redirectUrl
 func (handler *WxAppIdAuthHandler) AuthRedirectUrl(w http.ResponseWriter, r *http.Request, code, state string) {
-	wxUser := NewWxUser(handler.wxParams)
-	openId, err := wxUser.GetOpenId(code) // 根据请求code获取用户的openId
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	rd := &_redirectData{
+		code,
+		state,
+		w,
+		r,
+		make(chan *_redirectRes),
 	}
-	err = wxUser.GetInfo()
 
-	b := &bytes.Buffer{}
-	json.NewEncoder(b).Encode(map[string]interface{}{
-		"appId": handler.wxParams.AppId,
-		"openId": openId,
-		"state": state,
-		"userInfo": &(wxUser.UserInfo),
-		"userInfoError": func(err error)string{
-			if err == nil {
-				return ""
-			} else {
-				return err.Error()
-			}
-		}(err),
-	})
-
-	forwarder := func()*httputil.ReverseProxy{
-		return &httputil.ReverseProxy{
-			Director: func(r *http.Request) {
-				r.Method = http.MethodPost
-				r.URL, _ = url.Parse(handler.redirectUrl)
-				r.Body = ioutil.NopCloser(b)
-				r.ContentLength = int64(b.Len())
-				r.Header.Set("Content-Type", "application/json")
-			},
-		}
-	}()
-
-	forwarder.ServeHTTP(w, r)
+	handler.reqs <- rd
+	<-rd.result
+	close(rd.result)
 }
 
 // 获取微信网页授权的处理结果，分别返回 [网页内容(非空), 需要设置的header, 跳转的url(非空), error]
@@ -147,10 +170,12 @@ func (handler *WxAppIdAuthHandler) AuthRedirect(code string, state string) (stri
 	rd := &_redirectData{
 		code,
 		state,
+		nil,
+		nil,
 		make(chan *_redirectRes),
 	}
-	handler.reqs <- rd
 
+	handler.reqs <- rd
 	rr := <-rd.result
 	close(rd.result)
 	return rr.msg, rr.headers, rr.rurl, rr.err
