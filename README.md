@@ -128,6 +128,11 @@ func main() {
 	wxapi.RegisterWxMsghandler(&YourMsgHandler{})
 	wxapi.RegisterRedictHandler(handleMenuRedirect)
 
+	// 菜单跳转也可以全权交给另外一个URL处理，如果调用了下面的函数，wxapi.RegisterRedictHandler()设置的处理器将被忽略
+	// redirectURL接收POST请求，POST body是一个JSON: {"appId":"xxx", "openId", "xxx", "state": "xxx", "userInfo": {}}
+	// 它可以随意处理HTTP请求、输出HTTP响应，响应结果直接返回公众号浏览器
+	wxapi.RegisterRedirectUrl("http://youhost.com/path/to/redirect")
+
 	// 步骤2.5 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
 	// signatureChecker := wxapi.NewWxSignatureChecker(wxconf.WxParams.Token, 0, []string{service})
 	// <middleWareContainer>.Use(signatureChecker)
@@ -202,6 +207,11 @@ func main() {
 		// 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
 		wxService.RegisterWxMsghandler(&YourMsgHandler{})   // 不同的wxService可以有不同的MsgHandler
 		wxService.RegisterRedictHandler(handleMenuRedirect) // 不同的wxSercice可以有不同的RedirectHandler
+
+		// 菜单跳转也可以全权交给另外一个URL处理，如果调用了下面的函数，wxService.RegisterRedictHandler()设置的处理器将被忽略
+		// redirectURL接收POST请求，POST body是一个JSON: {"appId":"xxx", "openId", "xxx", "state": "xxx", "userInfo": {}}
+		// 它可以随意处理HTTP请求、输出HTTP响应，响应结果直接返回公众号浏览器
+		wxService.RegisterRedirectUrl("http://yourhost.com/path/to/redirect")
 
 		// 步骤2.5 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
 		// signatureChecker := wxapi.NewWxSignatureChecker(wxParams.Token, 0, []string{conf.service})

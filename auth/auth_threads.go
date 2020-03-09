@@ -104,12 +104,29 @@ func ParseRedirectArgs(r *http.Request) (string, string, error) {
 
 // 网页授权全权转发给redirectUrl
 func (handler *WxAppIdAuthHandler) AuthRedirectUrl(w http.ResponseWriter, r *http.Request, code, state string) {
+	wxUser := NewWxUser(handler.wxParams)
+	openId, err := wxUser.GetOpenId(code) // 根据请求code获取用户的openId
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = wxUser.GetInfo()
+
 	b := &bytes.Buffer{}
-	json.NewEncoder(b).Encode(map[string]string{
+	json.NewEncoder(b).Encode(map[string]interface{}{
 		"appId": handler.wxParams.AppId,
-		"code": code,
+		"openId": openId,
 		"state": state,
+		"userInfo": &(wxUser.UserInfo),
+		"userInfoError": func(err error)string{
+			if err == nil {
+				return ""
+			} else {
+				return err.Error()
+			}
+		}(err),
 	})
+
 	forwarder := func()*httputil.ReverseProxy{
 		return &httputil.ReverseProxy{
 			Director: func(r *http.Request) {
