@@ -57,14 +57,14 @@ func (handler *WxAppIdAuthHandler) redirect(req *_redirectData, wxUser *WxUser) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = wxUser.GetInfo()
+	userInfo, err := wxUser.GetInfoByAccessToken()
 
 	b := &bytes.Buffer{}
 	json.NewEncoder(b).Encode(map[string]interface{}{
 		"appId": handler.wxParams.AppId,
 		"openId": openId,
 		"state": state,
-		"userInfo": &(wxUser.UserInfo),
+		"userInfo": userInfo,
 		"userInfoError": func(err error)string{
 			if err == nil {
 				return ""

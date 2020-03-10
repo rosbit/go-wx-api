@@ -50,10 +50,37 @@ func (user *WxUser) GetOpenId(code string) (string, error) {
 	return user.openId, nil
 }
 
-/*
-get user info with OAuth2 API.
-please call this method after calling getOpenId().
-*/
+func GetUserInfo(accessToken, openId string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/user/info?access_token=%s&openid=%s&lang=zh_CN", accessToken, openId)
+	resp, err := CallWxAPI(url, "GET", nil)
+	if err != nil {
+		return nil, err
+	}
+	var res map[string]interface{}
+	if err = json.Unmarshal(resp, &res); err != nil {
+		return nil, err
+	}
+	if _, ok := res["errcode"]; ok {
+		return nil, fmt.Errorf("%s", string(resp))
+	}
+	return res, nil
+}
+
+// get user info by common access token
+// please call this method after calling getOpenId().
+// this calling will succeed if params are valid.
+func (user *WxUser) GetInfoByAccessToken() (map[string]interface{}, error) {
+	token := NewAccessTokenWithParams(user.wxParams)
+	accessToken, err := token.Get()
+	if err != nil {
+		return nil, err
+	}
+	return GetUserInfo(accessToken, user.openId)
+}
+
+// get user info with OAuth2 API.
+// please call this method after calling getOpenId().
+// this calling maybe fail if unauthorized
 func (user *WxUser) GetInfo() error {
 	url := fmt.Sprintf("https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN", user.accessToken, user.openId)
 	body, err := CallWxAPI(url, "GET", nil)
@@ -78,7 +105,7 @@ func (user *WxUser) getAccessToken(url string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("get accessToken ok, res: %v\n", string(res))
+	// fmt.Printf("get accessToken ok, res: %v\n", string(res))
 
 	var j map[string]interface{}
 	if err = json.Unmarshal(res, &j); err != nil {
