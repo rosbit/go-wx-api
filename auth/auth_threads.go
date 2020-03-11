@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"bytes"
 	"fmt"
 )
@@ -37,7 +38,8 @@ type WxAppIdAuthHandler struct {
 	wxParams *wxconf.WxParamsT
 	reqs chan *_redirectData
 
-	redirectUrl     string          // 转发处理URL，**如果存在，下面的redirectHandler将被忽略**
+	userInfoFlag   string     // redirectUrl是否处理 "snsapi_userinfo" scope的标志串
+	redirectUrl    string     // 转发处理URL，**如果存在，下面的redirectHandler将被忽略**
 	redirectHandler RedirectHandler // 转发处理程序，参见auth_redictor.go
 }
 
@@ -57,10 +59,24 @@ func (handler *WxAppIdAuthHandler) redirect(req *_redirectData, wxUser *WxUser) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	userInfo, err := wxUser.GetInfoByAccessToken()
+
+	auth2UserInfo := false
+	if len(handler.userInfoFlag) > 0 {
+		auth2UserInfo = strings.Index(r.RequestURI, handler.userInfoFlag) >= 0
+	}
+
+	var userInfo interface{}
+	if auth2UserInfo {
+		if err = wxUser.GetInfo(); err == nil {
+			userInfo = &wxUser.UserInfo
+		}
+	} else {
+		userInfo, err = wxUser.GetInfoByAccessToken()
+	}
 
 	b := &bytes.Buffer{}
 	json.NewEncoder(b).Encode(map[string]interface{}{
+		"reqestURI": r.RequestURI,
 		"appId": handler.wxParams.AppId,
 		"openId": openId,
 		"state": state,

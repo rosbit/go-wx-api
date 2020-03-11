@@ -48,46 +48,6 @@ go-wx-api已经对公众号常用的消息(文本框架输入、发语音等)、
     - 单一公众号注册方法见方法2
     - 多公众号注册方法见方法3
 
- 1. 菜单跳转处理器实现
-    - 单一公众号
-
-       ```go
-       /**
-        * 据服务号菜单state做跳转
-        * @param openId  订阅用户的openId
-        * @param state   微信网页授权中的参数，用来标识某个菜单
-        * @return
-        *   c    需要显示服务号对话框中的内容
-        *   h    需要在微信内嵌浏览器中设置的header信息，包括Cookie
-        *   r    需要通过302跳转的URL。如果r不是空串，c的内容被忽略
-        *   err  如果没有错误返回nil，非nil表示错误
-        */
-       func handleMenuRedirect(openId, state string) (c string, h map[string]string, r string, err error) {
-            r = "http://www.yourhost.com/path/to/service"
-            return
-       }
-       ```
-
-    - 多公众号
-
-       ```go
-       /**
-        * 据服务号菜单state做跳转
-        * @param appId   公众号的appId，用于区分不同的公众号
-        * @param openId  订阅用户的openId
-        * @param state   微信网页授权中的参数，用来标识某个菜单
-        * @return
-        *   c    需要显示服务号对话框中的内容
-        *   h    需要在微信内嵌浏览器中设置的header信息，包括Cookie
-        *   r    需要通过302跳转的URL。如果r不是空串，c的内容被忽略
-        *   err  如果没有错误返回nil，非nil表示错误
-        */
-       func handleMenuRedirect(appId, openId, state string) (c string, h map[string]string, r string, err error) {
-            r = "http://www.yourhost.com/path/to/service"
-            return
-       }
-       ```
-
 ## 使用方法2: (单一公众号服务)
 
 以下是一个简单的例子，用于说明使用go-wx-api的主要执行步骤。更详细的例子参考[go-wx-apps](https://github.com/rosbit/go-wx-apps)
@@ -126,9 +86,8 @@ func main() {
 
 	// 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
 	wxapi.RegisterWxMsghandler(&YourMsgHandler{})
-	wxapi.RegisterRedictHandler(handleMenuRedirect)
 
-	// 菜单跳转也可以全权交给另外一个URL处理，如果调用了下面的函数，wxapi.RegisterRedictHandler()设置的处理器将被忽略
+	// 菜单跳转全权交给另外一个URL处理
 	// redirectURL接收POST请求，POST body是一个JSON: {"appId":"xxx", "openId", "xxx", "state": "xxx", "userInfo": {}}
 	// 它可以随意处理HTTP请求、输出HTTP响应，响应结果直接返回公众号浏览器
 	wxapi.RegisterRedirectUrl("http://youhost.com/path/to/redirect")
@@ -206,9 +165,8 @@ func main() {
 
 		// 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
 		wxService.RegisterWxMsghandler(&YourMsgHandler{})   // 不同的wxService可以有不同的MsgHandler
-		wxService.RegisterRedictHandler(handleMenuRedirect) // 不同的wxSercice可以有不同的RedirectHandler
 
-		// 菜单跳转也可以全权交给另外一个URL处理，如果调用了下面的函数，wxService.RegisterRedictHandler()设置的处理器将被忽略
+		// 菜单跳转全权交给另外一个URL处理
 		// redirectURL接收POST请求，POST body是一个JSON: {"appId":"xxx", "openId", "xxx", "state": "xxx", "userInfo": {}}
 		// 它可以随意处理HTTP请求、输出HTTP响应，响应结果直接返回公众号浏览器
 		wxService.RegisterRedirectUrl("http://yourhost.com/path/to/redirect")

@@ -19,6 +19,7 @@ func RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
 }
 
 /**
+ * @deprecated，建议使用RegisterRedirectUrl()
  * [函数签名]根据服务号菜单state做跳转
  * @param openId  订阅用户的openId
  * @param state   微信网页授权中的参数，用来标识某个菜单
@@ -32,6 +33,7 @@ type RedirectHandler = wxauth.RedirectHandlerWithoutAppId
 //type RedirectHandler func(openId, state string) (c string, h map[string]string, r string, err error)
 
 /**
+ * @deprecated，建议使用RegisterRedirectUrl()
  * 注册微信网页授权处理函数
  */
 func RegisterRedictHandler(handler RedirectHandler) {
@@ -44,8 +46,9 @@ func RegisterRedictHandler(handler RedirectHandler) {
 // 参数JSON: {"appId": "xxx", "openId": "xxx", "state": "state"}
 // 该URL的以POST形式接收参数，而且会得到所有的HTTP头信息，可以设置任何的响应头信息，响应结果直接显示在公众号浏览器中
 // 响应时间要控制好，避免微信服务超时
-func RegisterRedirectUrl(redirectUrl string) {
-	defaultWxHandler.RegisterRedirectUrl(redirectUrl)
+// userInfoFlag只取第一个，用于检查转发url中是否有标志串，表示使用 snsapi_userinfo 获取用户信息
+func RegisterRedirectUrl(redirectUrl string, userInfoFlag ...string) {
+	defaultWxHandler.RegisterRedirectUrl(redirectUrl, userInfoFlag...)
 }
 
 // ---------------- 支持多服务号 ------------------
@@ -53,6 +56,7 @@ func (h *WxHandler) RegisterWxMsghandler(msgHandler wxmsg.WxMsgHandler) {
 	h.appMsgParser.RegisterWxMsgHandler(msgHandler)
 }
 
+// @deprecated，建议使用RegisterRedirectUrl()
 func (h *WxHandler) RegisterRedictHandler(handler wxauth.RedirectHandler) {
 	h.appIdHandler.RegisterRedictHandler(handler)
 }
@@ -61,6 +65,7 @@ func (h *WxHandler) RegisterRedictHandler(handler wxauth.RedirectHandler) {
 // 参数JSON: {"appId": "xxx", "openId": "xxx", "state": "state"}
 // 该URL的以POST形式接收参数，而且会得到所有的HTTP头信息，可以设置任何的响应头信息，响应结果直接显示在公众号浏览器中
 // 响应时间要控制好，避免微信服务超时
-func (h *WxHandler) RegisterRedirectUrl(redirectUrl string) {
-	h.appIdHandler.RegisterRedirectUrl(redirectUrl)
+// userInfoFlag只取第一个，用于检查转发url中是否有标志串，表示使用 snsapi_userinfo 获取用户信息
+func (h *WxHandler) RegisterRedirectUrl(redirectUrl string, userInfoFlag ...string) {
+	h.appIdHandler.RegisterRedirectUrl(redirectUrl, userInfoFlag...)
 }

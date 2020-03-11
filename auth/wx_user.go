@@ -18,6 +18,8 @@ type WxUserInfo struct {
 	HeadImgUrl string  `json:"headimgurl"`
 	Privilege []string `json:"privilege"`
 	UnionId   string   `json:"unionid"`
+	Errcode  int    `json:"errcode,omitempty"`
+	Errmsg   string `json:"errmsg,omitempty"`
 }
 
 type WxUser struct {
@@ -60,8 +62,9 @@ func GetUserInfo(accessToken, openId string) (map[string]interface{}, error) {
 	if err = json.Unmarshal(resp, &res); err != nil {
 		return nil, err
 	}
-	if _, ok := res["errcode"]; ok {
-		return nil, fmt.Errorf("%s", string(resp))
+	if errcode, ok := res["errcode"]; ok {
+		errmsg, _ := res["errmsg"]
+		return nil, fmt.Errorf("%v: %v", errcode, errmsg)
 	}
 	return res, nil
 }
@@ -87,16 +90,13 @@ func (user *WxUser) GetInfo() error {
 	if err != nil {
 		return err
 	}
-	var res map[string]interface{}
-	if err = json.Unmarshal(body, &res); err != nil {
+	if err = json.Unmarshal(body, &user.UserInfo); err != nil {
 		return err
 	}
-	if errcode, ok := res["errcode"]; ok {
-		errMsg, _ := res["errmsg"]
-		return fmt.Errorf("%v: %v", errcode, errMsg)
+	if user.UserInfo.Errcode > 0 {
+		return fmt.Errorf("%d: %s", user.UserInfo.Errcode, user.UserInfo.Errmsg)
 	}
 
-	json.Unmarshal(body, &user.UserInfo)
 	return nil
 }
 
@@ -107,23 +107,21 @@ func (user *WxUser) getAccessToken(url string) error {
 	}
 	// fmt.Printf("get accessToken ok, res: %v\n", string(res))
 
-	var j map[string]interface{}
-	if err = json.Unmarshal(res, &j); err != nil {
-		return err
-	}
-	if errcode, ok := j["errcode"]; ok  {
-		errMsg, _ := j["errmsg"]
-		return fmt.Errorf("%v: %v", errcode, errMsg)
-	}
-
 	var token struct {
 		AccessToken  string `json:"access_token"`
 		ExpiresIn    int    `json:"expires_in"`
 		RefreshToken string `json:"refresh_token"`
 		OpenId       string `json:"openid"`
 		Scope        string `json:"scope"`
+		Errcode      int    `json:"errcode,omitempty"`
+		Errmsg       string `json:"errmsg,omitempty"`
 	}
-	json.Unmarshal(res, &token)
+	if err = json.Unmarshal(res, &token); err != nil {
+		return err
+	}
+	if token.Errcode > 0 {
+		return fmt.Errorf("%d: %s", token.Errcode, token.Errmsg)
+	}
 
 	user.openId       = token.OpenId
 	user.accessToken  = token.AccessToken

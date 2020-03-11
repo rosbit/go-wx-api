@@ -3,8 +3,23 @@
  */
 package wxauth
 
+// 注册转发HTTP(s) URL，该URL将全权决定网页授权的处理。如果该URL存在，优先级要"高于"RegisterRedictHandler()注册函数。
+// 参数JSON: {"appId": "xxx", "openId": "xxx", "state": "state"}
+// 该URL的以POST形式接收参数，而且会得到所有的HTTP头信息，可以设置任何的响应头信息，响应结果直接显示在公众号浏览器中
+// 响应时间要控制好，避免微信服务超时
+func (p *WxAppIdAuthHandler) RegisterRedirectUrl(redirectUrl string, userInfoFlag ...string) {
+	if len(userInfoFlag) > 0 {
+		p.userInfoFlag = userInfoFlag[0]
+	} else {
+		p.userInfoFlag = ""
+	}
+	p.redirectUrl = redirectUrl
+}
+
+// @deprecated，建议用RegisterRedirectUrl()
 type RedirectHandlerWithoutAppId func(openId, state string) (string, map[string]string, string, error)
 
+// @deprecated，建议用RegisterRedirectUrl()
 // 根据服务号菜单state做跳转的实现，缺省实现可以被RegisterRedictHandler覆盖
 var HandleRedirect = func(openId, state string) (string, map[string]string, string, error) {
 	return "success", nil, "", nil
@@ -12,6 +27,7 @@ var HandleRedirect = func(openId, state string) (string, map[string]string, stri
 
 // ---------------- 支持多服务号的实现 ------------------
 /**
+ * @deprecated，建议用RegisterRedirectUrl()
  * [函数签名]根据服务号菜单state做跳转
  * @param appId   服务号的appId，用于区分服务号
  * @param openId  订阅用户的openId
@@ -24,6 +40,7 @@ var HandleRedirect = func(openId, state string) (string, map[string]string, stri
  */
 type RedirectHandler func(appId, openId, state string) (c string, h map[string]string, r string, err error)
 
+// @deprecated，建议用RegisterRedirectUrl()
 func ToAppIdRedirectHandler(handler RedirectHandlerWithoutAppId) RedirectHandler {
 	return func(appId,openId,state string)(c string,h map[string]string,r string,err error) {
 		c,h,r,err = handler(openId, state)
@@ -31,14 +48,7 @@ func ToAppIdRedirectHandler(handler RedirectHandlerWithoutAppId) RedirectHandler
 	}
 }
 
-// 注册转发HTTP(s) URL，该URL将全权决定网页授权的处理。如果该URL存在，优先级要"高于"RegisterRedictHandler()注册函数。
-// 参数JSON: {"appId": "xxx", "openId": "xxx", "state": "state"}
-// 该URL的以POST形式接收参数，而且会得到所有的HTTP头信息，可以设置任何的响应头信息，响应结果直接显示在公众号浏览器中
-// 响应时间要控制好，避免微信服务超时
-func (p *WxAppIdAuthHandler) RegisterRedirectUrl(redirectUrl string) {
-	p.redirectUrl = redirectUrl
-}
-
+// @deprecated，建议用RegisterRedirectUrl()
 // 注册网页授权处理函数，该函数优先级"低于"RegisterRedirectUrl()注册的URL
 func (p *WxAppIdAuthHandler) RegisterRedictHandler(handler RedirectHandler) {
 	if handler != nil {
