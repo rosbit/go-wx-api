@@ -76,7 +76,7 @@ func (handler *WxAppIdAuthHandler) redirect(req *_redirectData, wxUser *WxUser) 
 
 	b := &bytes.Buffer{}
 	json.NewEncoder(b).Encode(map[string]interface{}{
-		"reqestURI": r.RequestURI,
+		"requestURI": r.RequestURI,
 		"appId": handler.wxParams.AppId,
 		"openId": openId,
 		"state": state,
