@@ -8,19 +8,7 @@ import (
 	"github.com/rosbit/go-wx-api/conf"
 )
 
-type WxUserInfo struct {
-	OpenId   string `json:"openid"`
-	Nickname string `json:"nickname"`
-	Sex      string `json:"sex"`
-	Province string `json:"province"`
-	City     string `json:"city"`
-	Country  string `json:"country"`
-	HeadImgUrl string  `json:"headimgurl"`
-	Privilege []string `json:"privilege"`
-	UnionId   string   `json:"unionid"`
-	Errcode  int    `json:"errcode,omitempty"`
-	Errmsg   string `json:"errmsg,omitempty"`
-}
+type WxUserInfo map[string]interface{} // 由于文档上sex是string类型，实际是整型。干脆不用struct解析了
 
 type WxUser struct {
 	openId string
@@ -93,8 +81,9 @@ func (user *WxUser) GetInfo() error {
 	if err = json.Unmarshal(body, &user.UserInfo); err != nil {
 		return err
 	}
-	if user.UserInfo.Errcode > 0 {
-		return fmt.Errorf("%d: %s", user.UserInfo.Errcode, user.UserInfo.Errmsg)
+	if errcode, ok := user.UserInfo["errcode"]; ok {
+		errmsg, _ := user.UserInfo["errmsg"]
+		return fmt.Errorf("%d: %s", errcode, errmsg)
 	}
 
 	return nil
