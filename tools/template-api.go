@@ -18,7 +18,7 @@ func QueryTemplateIndustry(accessToken string) ([]byte, error) {
 	return wxauth.CallWxAPI(url, "GET", nil)
 }
 
-func SendTemplateMessage(accessToken string, toUser string, templateId string, data map[string]interface{}) ([]byte, error) {
+func SendTemplateMessage(accessToken string, toUser string, templateId string, data map[string]interface{}, url, mpId, mpPagePath string) ([]byte, error) {
 	dData := make(map[string]interface{})
 	for k,v := range data {
 		dData[k] = map[string]string{"value": fmt.Sprintf("%v", v)}
@@ -29,7 +29,16 @@ func SendTemplateMessage(accessToken string, toUser string, templateId string, d
 		"template_id": templateId,
 		"data": dData,
 	}
-	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s", accessToken)
-	return wxauth.JsonCall(url, "POST", d)
+	if len(url) > 0 {
+		d["url"] = url
+	}
+	if len(mpId) > 0 && len(mpPagePath) > 0 {
+		d["miniprogram"] = map[string]string{
+			"appid": mpId,
+			"pagepath": mpPagePath,
+		}
+	}
+	u := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s", accessToken)
+	return wxauth.JsonCall(u, "POST", d)
 }
 
