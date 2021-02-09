@@ -4,10 +4,10 @@
 package wxmsg
 
 import (
+	"text/template"
 	"fmt"
 	"time"
 	"bytes"
-	"text/template"
 )
 
 const (

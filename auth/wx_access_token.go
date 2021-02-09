@@ -1,26 +1,23 @@
 package wxauth
 
 import (
+	"github.com/rosbit/go-wx-api/v2/call-wx"
+	"github.com/rosbit/go-wx-api/v2/conf"
 	"time"
 	"fmt"
 	"os"
 	"encoding/json"
-	"github.com/rosbit/go-wx-api/conf"
 )
 
 type AccessToken struct {
 	accessToken string
 	expireTime int64
-	wxParams *wxconf.WxParamsT
+	wxParams *wxconf.WxParamT
 }
 
-func NewAccessToken() *AccessToken {
-	return NewAccessTokenWithParams(nil)
-}
-
-func NewAccessTokenWithParams(params *wxconf.WxParamsT) *AccessToken {
+func NewAccessToken(params *wxconf.WxParamT) *AccessToken {
 	if params == nil {
-		params = &wxconf.WxParams
+		return nil
 	}
 	token := &AccessToken{wxParams:params}
 	token.loadFromStore()
@@ -46,17 +43,16 @@ func (token *AccessToken) get_access_token() error {
 		token.wxParams.AppId,
 		token.wxParams.AppSecret,
 	)
-	body, err := CallWxAPI(url, "GET", nil)
-	if err != nil {
-		return err
-	}
+
 	var res struct {
+		callwx.BaseResult
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
 	}
-	if err = json.Unmarshal(body, &res); err != nil {
+	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &res); err != nil {
 		return err
 	}
+
 	token.accessToken = res.AccessToken
 	token.expireTime =  res.ExpiresIn + time.Now().Unix() - 10
 

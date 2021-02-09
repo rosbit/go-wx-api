@@ -22,7 +22,7 @@ go-wx-api已经对公众号常用的消息(文本框架输入、发语音等)、
 
     ```go
     import (
-        "github.com/rosbit/go-wx-api/msg"
+        "github.com/rosbit/go-wx-api/v2/msg"
         "fmt"
     )
 
@@ -56,8 +56,9 @@ go-wx-api已经对公众号常用的消息(文本框架输入、发语音等)、
 package main
 
 import (
-	"github.com/rosbit/go-wx-api/conf"
-	"github.com/rosbit/go-wx-api"
+	"github.com/rosbit/go-wx-api/v2/conf"
+	"github.com/rosbit/go-wx-api/v2/msg"
+	"github.com/rosbit/go-wx-api/v2"
 	"net/http"
 	"fmt"
 )
@@ -72,34 +73,32 @@ const (
 	service    = "/wx"  // 微信公众号管理端服务器配置中URL的路径部分
 
 	workerNum = 3 // 处理请求的并发数
+	name = "test" // 服务的名字
 )
 
 func main() {
-	// 步骤1. 设置配置参数
-	if err := wxconf.SetParams(token, appId, appSecret, aesKey); err != nil {
+	// 步骤1. 初始化accessToken缓存路径
+	wxapi.InitWx("/tmp")
+
+	// 步骤2. 设置配置参数
+	if err := wxapi.SetWxParams(name, token, appId, appSecret, aesKey); err != nil {
 		fmt.Printf("failed to set params: %v\n", err)
 		return
 	}
 
-	// 步骤2. 初始化SDK
-	wxapi.InitWxAPI(workerNum, os.Stdout)
-
-	// 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
-	wxapi.RegisterWxMsghandler(&YourMsgHandler{})
-
-	// 菜单跳转全权交给另外一个URL处理
-	// redirectURL接收POST请求，POST body是一个JSON: {"appId":"xxx", "openId", "xxx", "state": "xxx", "userInfo": {}}
-	// 它可以随意处理HTTP请求、输出HTTP响应，响应结果直接返回公众号浏览器
-	wxapi.RegisterRedirectUrl("http://youhost.com/path/to/redirect")
-
-	// 步骤2.5 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
-	// signatureChecker := wxapi.NewWxSignatureChecker(wxconf.WxParams.Token, 0, []string{service})
+	// 步骤3: 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
+	// signatureChecker := wxapi.NewWxSignatureChecker(token, 0, []string{service})
 	// <middleWareContainer>.Use(signatureChecker)
 
-	// 步骤3. 设置http路由，启动http服务
-	http.HandleFunc(service, wxapi.Echo)     // 用于配置
-	http.HandleFunc(service, wxapi.Request)  // 用于实际执行公众号请求，和wxapi.Echo只能使用一个。
-	                                         // 可以使用支持高级路由功能的web框架同时设置，参考 github.com/rosbit/go-wx-api/samples/wx-echo-server
+	// 步骤4. 设置http路由，启动http服务
+	// 用于公众号配置
+	http.HandleFunc(service, wxapi.CreateEcho(token))
+
+	// 用于实际执行公众号请求，和wxapi.CreateEcho只能使用一个。
+	// 可以使用支持高级路由功能的web框架同时设置
+	http.HandleFunc(service, wxapi.CreateMsgHandler(name, workerNum, wxmsg.MsgHandler))  // 使用缺省的消息处理器
+	http.HandleFunc(service, wxapi.CreateMsgHandler(name, workerNum, &YourMsgHandler{})) // 使用自定义的消息处理器
+	                                         
 	http.ListenAndServe(fmt.Sprintf(":%d", listenPort), nil)
 }
 ```
@@ -112,73 +111,81 @@ func main() {
 package main
 
 import (
-	"github.com/rosbit/go-wx-api/conf"
-	"github.com/rosbit/go-wx-api"
+	"github.com/rosbit/go-wx-api/v2/conf"
+	"github.com/rosbit/go-wx-api/v2"
 	"net/http"
 	"fmt"
 )
 
 type WxConf struct {
+	name string
 	token string
 	appId string
 	appSecret string
 	aesKey string
 	workerNum int
 	service string
+	rd string
+	redirectUrl string
 }
 
 var (
 	listenPort = 7070   // 服务侦听的端口号，请根据微信公众号管理端的服务器配置正确设置
 	wxServices = []WxConf{
 		WxConf{
+			name: "wx1",
 			token: "微信公众号1的token",
 			appId: "微信公众号1的appId",
 			appSecret: "微信公众号的1secret",
 			aesKey: "",      // 安全模式 使用的AESKey，如果是 明文传输，该串为空
 			workerNum: 3,    // 处理请求的并发数
 			service: "/wx1", // 微信公众号管理端服务器配置中URL的路径部分
+			rd: "/rd1", // 网页授权接受地址
+			redirectUrl: "http://localhost:port/redirect", // 接受网页授权转发的其它服务
 		},
 		WxConf{
+			name: "wx2",
 			token: "微信公众号2的token",
 			appId: "微信公众号2的appId",
 			appSecret: "微信公众号2的secret",
 			aesKey: "",      // 安全模式 使用的AESKey，如果是 明文传输，该串为空
 			workerNum: 3,    // 处理请求的并发数
 			service: "/wx2", // 微信公众号管理端服务器配置中URL的路径部分
+			rd: "/rd2", // 网页授权接受地址
+			redirectUrl: "http://localhost:port/redirect", // 接受网页授权转发的其它服务
 		},
 		// 其它服务号
 	}
 )
 
 func main() {
+	// 步骤1. 初始化accessToken缓存路径
+	wxapi.InitWx("/tmp")
+
 	// 对于每一个公众号执行
 	for _, conf := range wxServices {
-		// 步骤1. 设置配置参数
-		wxParams, err := wxconf.NewWxParams(conf.token, conf.appId, conf.appSecret, conf.aesKey)
-		if err != nil {
+		// 步骤2. 设置配置参数
+		if err := wxapi.SetWxParams(conf.name, conf.token, conf.appId, conf.appSecret, conf.aesKey); err != nil {
 			fmt.Printf("failed to set params: %v\n", err)
 			return
 		}
 
-		// 步骤2. 初始化SDK
-		wxService := wxapi.InitWxAPIWithParams(wxParams, conf.workerNum, os.Stdout)
-
-		// 注册消息处理器、菜单跳转处理器。如果没有相应的实现，可以注释掉下面两行代码
-		wxService.RegisterWxMsghandler(&YourMsgHandler{})   // 不同的wxService可以有不同的MsgHandler
-
-		// 菜单跳转全权交给另外一个URL处理
-		// redirectURL接收POST请求，POST body是一个JSON: {"appId":"xxx", "openId", "xxx", "state": "xxx", "userInfo": {}}
-		// 它可以随意处理HTTP请求、输出HTTP响应，响应结果直接返回公众号浏览器
-		wxService.RegisterRedirectUrl("http://yourhost.com/path/to/redirect")
-
 		// 步骤2.5 设置签名验证的中间件。由于net/http不支持中间件，省去该步骤
-		// signatureChecker := wxapi.NewWxSignatureChecker(wxParams.Token, 0, []string{conf.service})
+		// signatureChecker := wxapi.NewWxSignatureChecker(conf.token, 0, []string{conf.service})
 		// <middleWareContainer>.Use(signatureChecker)
 
 		// 步骤3. 设置http路由，启动http服务
-		http.HandleFunc(conf.service, wxService.Echo)     // 用于配置
-		http.HandleFunc(conf.service, wxService.Request)  // 用于实际执行公众号请求，和wxService.Echo只能使用一个。
-		                                                  // 可以使用支持高级路由功能的web框架同时设置
+		http.HandleFunc(conf.service, wxapi.CreateEcho(conf.token))     // 用于配置
+
+		// 用于实际执行公众号请求，和wxapi.CreateEcho只能使用一个。
+		// 可以使用支持高级路由功能的web框架同时设置。使用POST路由
+		http.HandleFunc(conf.service, wxapi.CreateMsgHandler(conf.name, conf.workerNum, wxmsg.MsgHandler))  // 使用缺省的消息处理器
+		http.HandleFunc(conf.service, wxapi.CreateMsgHandler(conf.name, conf.workerNum, &YourMsgHandler{})) // 使用自定义的消息处理器
+
+		// 菜单跳转全权交给另外一个URL处理，用GET路由
+		// redirectURL接收POST请求，POST body是一个JSON: {"appId":"xxx", "openId", "xxx", "state": "xxx", "userInfo": {}}
+		// 它可以随意处理HTTP请求、输出HTTP响应，响应结果直接返回公众号浏览器
+		http.HandleFunc(conf.rd, wxapi.CreateOAuth2Redirector(conf.name, conf.workerNum, conf.redirectUrl))
 	}
 
 	http.ListenAndServe(fmt.Sprintf(":%d", listenPort), nil)

@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-type WxParamsT struct {
+type WxParamT struct {
 	Token     string
 	AesKey    []byte
 	AppId     string
@@ -16,11 +16,17 @@ type WxParamsT struct {
 }
 
 var (
-	WxParams WxParamsT
+	wxParams = map[string]*WxParamT{}
 	TokenStorePath string
 )
 
-func (params *WxParamsT) SetAesKey(aesKey string) error {
+func InitTokenStorePath(tokenStorePath string) {
+	if len(tokenStorePath) > 0 {
+		TokenStorePath = tokenStorePath
+	}
+}
+
+func (params *WxParamT) setAesKey(aesKey string) error {
 	var err error
 	if params.AesKey, err = base64.StdEncoding.DecodeString(fmt.Sprintf("%s=", aesKey)); err != nil {
 		return err
@@ -31,27 +37,23 @@ func (params *WxParamsT) SetAesKey(aesKey string) error {
 	return nil
 }
 
-func NewWxParams(token, appId, appSecret, aesKey string) (*WxParamsT, error) {
-	params := &WxParamsT{Token:token, AppId:appId, AppSecret:appSecret}
+func NewWxParams(name, token, appId, appSecret, aesKey string) error {
+	params := &WxParamT{Token:token, AppId:appId, AppSecret:appSecret}
 	if aesKey == "" {
-		return params, nil
-	}
-	if err := params.SetAesKey(aesKey); err != nil {
-		return nil, err
-	}
-	return params, nil
-}
-
-func SetAesKey(aesKey string) error {
-	return WxParams.SetAesKey(aesKey)
-}
-
-func SetParams(token, appId, appSecret, aesKey string) error {
-	WxParams.Token, WxParams.AppId, WxParams.AppSecret = token, appId, appSecret
-	if aesKey == "" {
-		WxParams.AesKey = nil
+		wxParams[name] = params
 		return nil
 	}
-	return WxParams.SetAesKey(aesKey)
+	if err := params.setAesKey(aesKey); err != nil {
+		return err
+	}
+	wxParams[name] = params
+	return nil
+}
+
+func GetWxParams(name string) (*WxParamT) {
+	if params, ok := wxParams[name]; ok {
+		return params
+	}
+	return nil
 }
 

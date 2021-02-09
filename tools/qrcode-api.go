@@ -1,22 +1,23 @@
 package wxtools
 
 import (
+	"github.com/rosbit/go-wx-api/v2/call-wx"
+	"github.com/rosbit/go-wx-api/v2/auth"
+	"github.com/rosbit/go-wx-api/v2/conf"
 	"fmt"
-	"encoding/json"
-	"github.com/rosbit/go-wx-api/auth"
 )
 
-func CreateTempQrIntScene(accessToken string, sceneId int, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
-	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createTempQr(accessToken, sceneId, expireInSec, "QR_SCENE", "scene_id")
+func CreateTempQrIntScene(name string, sceneId int, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createTempQr(name, sceneId, expireInSec, "QR_SCENE", "scene_id")
 	return
 }
 
-func CreateTempQrStrScene(accessToken, sceneId string, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
-	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createTempQr(accessToken, sceneId, expireInSec, "QR_STR_SCENE", "scene_str")
+func CreateTempQrStrScene(name, sceneId string, expireInSec int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createTempQr(name, sceneId, expireInSec, "QR_STR_SCENE", "scene_str")
 	return
 }
 
-func createTempQr(accessToken string, sceneId interface{}, expireInSec int, action, idName string) (string, string, error) {
+func createTempQr(name string, sceneId interface{}, expireInSec int, action, idName string) (string, string, error) {
 	params := map[string]interface{}{
 		"expire_seconds": expireInSec,
 		"action_name": action,
@@ -26,20 +27,20 @@ func createTempQr(accessToken string, sceneId interface{}, expireInSec int, acti
 			},
 		},
 	}
-	return createQr(accessToken, params)
+	return createQr(name, params)
 }
 
-func CreateQrIntScene(accessToken string, sceneId int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
-	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createForeverQr(accessToken, sceneId, "QR_LIMIT_SCENE", "scene_id")
+func CreateQrIntScene(name string, sceneId int) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createForeverQr(name, sceneId, "QR_LIMIT_SCENE", "scene_id")
 	return
 }
 
-func CreateQrStrScene(accessToken, sceneId string) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
-	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createForeverQr(accessToken, sceneId, "QR_LIMIT_STR_SCENE", "scene_str")
+func CreateQrStrScene(name, sceneId string) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+	ticketURL2ShowQrCode, urlIncluedInQrcode, err = createForeverQr(name, sceneId, "QR_LIMIT_STR_SCENE", "scene_str")
 	return
 }
 
-func createForeverQr(accessToken string, sceneId interface{}, action, idName string) (string, string, error) {
+func createForeverQr(name string, sceneId interface{}, action, idName string) (string, string, error) {
 	params := map[string]interface{}{
 		"action_name": action,
 		"action_info": map[string]interface{}{
@@ -48,22 +49,29 @@ func createForeverQr(accessToken string, sceneId interface{}, action, idName str
 			},
 		},
 	}
-	return createQr(accessToken, params)
+	return createQr(name, params)
 }
 
-func createQr(accessToken string, params map[string]interface{}) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
-	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s", accessToken)
-	var resp []byte
-	if resp, err = wxauth.JsonCall(url, "POST", params); err != nil {
+func createQr(name string, params map[string]interface{}) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
+	wxParams := wxconf.GetWxParams(name)
+	if wxParams == nil {
+		err = fmt.Errorf("no params for %s", name)
+		return
+	}
+
+	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
+		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s", accessToken)
+		body = params
 		return
 	}
 
 	var res struct {
+		callwx.BaseResult
 		Ticket        string `json:"ticket"`
 		ExpireSeconds int    `json:"expire_seconds"`
 		Url           string `json:"url"`
 	}
-	if err = json.Unmarshal(resp, &res); err != nil {
+	if _, err = wxauth.CallWx(wxParams, genParams, "POST", callwx.JsonCall, &res); err != nil {
 		return
 	}
 

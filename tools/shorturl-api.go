@@ -1,34 +1,37 @@
 package wxtools
 
 import (
-	"github.com/rosbit/go-wx-api/auth"
+	"github.com/rosbit/go-wx-api/v2/call-wx"
+	"github.com/rosbit/go-wx-api/v2/auth"
+	"github.com/rosbit/go-wx-api/v2/conf"
 	"fmt"
-	"encoding/json"
 )
 
-func MakeShorturl(accessToken string, longUrl string) (shortUrl string, err error) {
-	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/shorturl?access_token=%s", accessToken)
-	var b []byte
-	if b, err = wxauth.JsonCall(url, "POST", map[string]string{
-		"action": "long2short",
-		"long_url": longUrl,
-	}); err != nil {
+func MakeShorturl(name string, longUrl string) (shortUrl string, err error) {
+	wxParams := wxconf.GetWxParams(name)
+	if wxParams == nil {
+		err = fmt.Errorf("no params for %s", name)
+		return
+	}
+
+	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
+		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/shorturl?access_token=%s", accessToken)
+		body = map[string]interface{}{
+			"action": "long2short",
+			"long_url": longUrl,
+		}
 		return
 	}
 
 	var res struct {
-		Errcode int
-		Errmsg string
+		callwx.BaseResult
 		ShortUrl string `json:"short_url"`
 	}
-	if err = json.Unmarshal(b, &res); err != nil {
-		return
-	}
-	if res.Errcode != 0 {
-		err = fmt.Errorf("errcode: %d, errmsg: %s", res.Errcode, res.Errmsg)
+	if _, err = wxauth.CallWx(wxParams, genParams, "POST", callwx.JsonCall, &res); err != nil {
 		return
 	}
 	shortUrl = res.ShortUrl
+
 	return
 }
 

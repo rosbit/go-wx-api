@@ -1,14 +1,10 @@
 /**
  * 微信网页授权处理主流程：固定线程数处理所有的请求
- * 工作方式:
- *   1. wxapi.ParseRedirectArgs(*http.Request)用于解析微信授权网页的code和state参数
- *   2. wxapi.AuthRedirect(code, state)用于处理结果
- *   3. wxapi.AuthRedirectUrl(http.ResponseWriter, *http.Request, code, state)用于全权处理网页授权，优先级高于AuthRediret()
  */
-package wxauth
+package wxoauth2
 
 import (
-	"github.com/rosbit/go-wx-api/conf"
+	"github.com/rosbit/go-wx-api/v2/auth"
 	"net/http/httputil"
 	"encoding/json"
 	"io/ioutil"
@@ -34,24 +30,16 @@ type _redirectData struct {
 	result chan *_redirectRes
 }
 
-type WxAppIdAuthHandler struct {
-	wxParams *wxconf.WxParamsT
+type WxOAuth2Handler struct {
+	service string
+	appId string
 	reqs chan *_redirectData
 
 	userInfoFlag   string     // redirectUrl是否处理 "snsapi_userinfo" scope的标志串
-	redirectUrl    string     // 转发处理URL，**如果存在，下面的redirectHandler将被忽略**
-	redirectHandler RedirectHandler // 转发处理程序，参见auth_redictor.go
+	redirectUrl    string     // 转发处理URL
 }
 
-func (handler *WxAppIdAuthHandler) GetAppId() string {
-	return handler.wxParams.AppId
-}
-
-func (handler *WxAppIdAuthHandler) HasRedirectUrl() bool {
-	return len(handler.redirectUrl) > 0
-}
-
-func (handler *WxAppIdAuthHandler) redirect(req *_redirectData, wxUser *WxUser) {
+func (handler *WxOAuth2Handler) redirect(req *_redirectData, wxUser *wxauth.WxUser) {
 	code, state, w, r := req.code, req.state, req.w, req.r
 
 	openId, err := wxUser.GetOpenId(code) // 根据请求code获取用户的openId
@@ -77,7 +65,7 @@ func (handler *WxAppIdAuthHandler) redirect(req *_redirectData, wxUser *WxUser) 
 	b := &bytes.Buffer{}
 	json.NewEncoder(b).Encode(map[string]interface{}{
 		"requestURI": r.RequestURI,
-		"appId": handler.wxParams.AppId,
+		"appId": handler.appId,
 		"openId": openId,
 		"state": state,
 		"userInfo": userInfo,
@@ -105,41 +93,23 @@ func (handler *WxAppIdAuthHandler) redirect(req *_redirectData, wxUser *WxUser) 
 	forwarder.ServeHTTP(w, r)
 }
 
-// 微信网页授权处理线程，输入请求被AuthRedirect()触发
-func (handler *WxAppIdAuthHandler) authThread() {
-	wxUser := NewWxUser(handler.wxParams)
-	appId := handler.GetAppId()
+// 微信网页授权处理线程，输入请求被AuthRedirectUrl()触发
+func (handler *WxOAuth2Handler) authThread() {
+	wxUser := wxauth.NewWxUser(handler.service)
 
-	for {
-		req := <-handler.reqs
-		if req.w != nil {
-			handler.redirect(req, wxUser)
-			req.result <- nil
-			continue
-		}
-
-		openId, err := wxUser.GetOpenId(req.code) // 根据请求code获取用户的openId
-		if err != nil {
-			req.result <- &_redirectRes{"", nil, "", err}
-			continue
-		}
-
-		redirect := handler.redirectHandler // 线程先启动，handler后设置，所以不能把赋值提到for外面
-		msg, headers, rurl, err := redirect(appId, openId, req.state)
-		req.result <- &_redirectRes{msg, headers, rurl, err}
+	for req := range handler.reqs {
+		handler.redirect(req, wxUser)
+		req.result <- nil
 	}
 }
 
 // 应用初始化时调用，启动若干个线程处理微信网页授权
-func StartAuthThreads(params *wxconf.WxParamsT, workerNum int) *WxAppIdAuthHandler {
-	h := &WxAppIdAuthHandler{}
-	if params == nil {
-		h.wxParams = &wxconf.WxParams
-	} else {
-		h.wxParams = params
-	}
+func StartAuthThreads(service, appId string, workerNum int, redirectUrl string, userInfoFlag ...string) *WxOAuth2Handler {
+	h := &WxOAuth2Handler{service:service, appId:appId, redirectUrl:redirectUrl}
 	h.reqs = make(chan *_redirectData, workerNum)
-	h.redirectHandler = ToAppIdRedirectHandler(HandleRedirect)
+	if len(userInfoFlag) > 0 {
+		h.userInfoFlag = userInfoFlag[0]
+	}
 
 	for i:=0; i<workerNum; i++ {
 		go h.authThread()
@@ -167,7 +137,7 @@ func ParseRedirectArgs(r *http.Request) (string, string, error) {
 }
 
 // 网页授权全权转发给redirectUrl
-func (handler *WxAppIdAuthHandler) AuthRedirectUrl(w http.ResponseWriter, r *http.Request, code, state string) {
+func (handler *WxOAuth2Handler) AuthRedirectUrl(w http.ResponseWriter, r *http.Request, code, state string) {
 	rd := &_redirectData{
 		code,
 		state,
@@ -180,20 +150,3 @@ func (handler *WxAppIdAuthHandler) AuthRedirectUrl(w http.ResponseWriter, r *htt
 	<-rd.result
 	close(rd.result)
 }
-
-// 获取微信网页授权的处理结果，分别返回 [网页内容(非空), 需要设置的header, 跳转的url(非空), error]
-func (handler *WxAppIdAuthHandler) AuthRedirect(code string, state string) (string, map[string]string, string, error) {
-	rd := &_redirectData{
-		code,
-		state,
-		nil,
-		nil,
-		make(chan *_redirectRes),
-	}
-
-	handler.reqs <- rd
-	rr := <-rd.result
-	close(rd.result)
-	return rr.msg, rr.headers, rr.rurl, rr.err
-}
-

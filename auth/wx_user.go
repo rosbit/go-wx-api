@@ -1,11 +1,11 @@
 package wxauth
 
 import (
+	"github.com/rosbit/go-wx-api/v2/call-wx"
+	"github.com/rosbit/go-wx-api/v2/conf"
 	"fmt"
 	"time"
 	"strings"
-	"encoding/json"
-	"github.com/rosbit/go-wx-api/conf"
 )
 
 type WxUserInfo map[string]interface{} // 由于文档上sex是string类型，实际是整型。干脆不用struct解析了
@@ -16,14 +16,15 @@ type WxUser struct {
 	expireTime int64
 	refreshToken string
 	scope []string
-	wxParams *wxconf.WxParamsT
+	wxParams *wxconf.WxParamT
 
 	UserInfo WxUserInfo
 }
 
-func NewWxUser(params *wxconf.WxParamsT) *WxUser {
+func NewWxUser(name string) *WxUser {
+	params := wxconf.GetWxParams(name)
 	if params == nil {
-		return &WxUser{wxParams: &wxconf.WxParams}
+		return nil
 	}
 	return &WxUser{wxParams: params}
 }
@@ -40,28 +41,31 @@ func (user *WxUser) GetOpenId(code string) (string, error) {
 	return user.openId, nil
 }
 
-func GetUserInfo(accessToken, openId string) (map[string]interface{}, error) {
-	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/user/info?access_token=%s&openid=%s&lang=zh_CN", accessToken, openId)
-	resp, err := CallWxAPI(url, "GET", nil)
-	if err != nil {
+func GetUserInfo(name, openId string) (map[string]interface{}, error) {
+	wxParams := wxconf.GetWxParams(name)
+	if wxParams == nil {
+		return nil, fmt.Errorf("no wxParams found for service %s", name)
+	}
+	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
+		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/user/info?access_token=%s&openid=%s&lang=zh_CN", accessToken, openId)
+		return
+	}
+
+	var res struct {
+		callwx.BaseResult
+		WxUserInfo
+	}
+	if _, err := CallWx(wxParams, genParams, "GET", callwx.HttpCall, &res); err != nil {
 		return nil, err
 	}
-	var res map[string]interface{}
-	if err = json.Unmarshal(resp, &res); err != nil {
-		return nil, err
-	}
-	if errcode, ok := res["errcode"]; ok {
-		errmsg, _ := res["errmsg"]
-		return nil, fmt.Errorf("%v: %v", errcode, errmsg)
-	}
-	return res, nil
+	return res.WxUserInfo, nil
 }
 
 // get user info by common access token
 // please call this method after calling getOpenId().
 // this calling will succeed if params are valid.
 func (user *WxUser) GetInfoByAccessToken() (map[string]interface{}, error) {
-	token := NewAccessTokenWithParams(user.wxParams)
+	token := NewAccessToken(user.wxParams)
 	accessToken, err := token.Get()
 	if err != nil {
 		return nil, err
@@ -74,42 +78,28 @@ func (user *WxUser) GetInfoByAccessToken() (map[string]interface{}, error) {
 // this calling maybe fail if unauthorized
 func (user *WxUser) GetInfo() error {
 	url := fmt.Sprintf("https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN", user.accessToken, user.openId)
-	body, err := CallWxAPI(url, "GET", nil)
-	if err != nil {
+	var res struct {
+		callwx.BaseResult
+		WxUserInfo
+	}
+	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &res); err != nil {
 		return err
 	}
-	if err = json.Unmarshal(body, &user.UserInfo); err != nil {
-		return err
-	}
-	if errcode, ok := user.UserInfo["errcode"]; ok {
-		errmsg, _ := user.UserInfo["errmsg"]
-		return fmt.Errorf("%d: %s", errcode, errmsg)
-	}
-
+	user.UserInfo = res.WxUserInfo
 	return nil
 }
 
 func (user *WxUser) getAccessToken(url string) error {
-	res, err := CallWxAPI(url, "GET", nil)
-	if err != nil {
-		return err
-	}
-	// fmt.Printf("get accessToken ok, res: %v\n", string(res))
-
 	var token struct {
+		callwx.BaseResult
 		AccessToken  string `json:"access_token"`
 		ExpiresIn    int    `json:"expires_in"`
 		RefreshToken string `json:"refresh_token"`
 		OpenId       string `json:"openid"`
 		Scope        string `json:"scope"`
-		Errcode      int    `json:"errcode,omitempty"`
-		Errmsg       string `json:"errmsg,omitempty"`
 	}
-	if err = json.Unmarshal(res, &token); err != nil {
+	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &token); err != nil {
 		return err
-	}
-	if token.Errcode > 0 {
-		return fmt.Errorf("%d: %s", token.Errcode, token.Errmsg)
 	}
 
 	user.openId       = token.OpenId

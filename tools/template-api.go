@@ -1,24 +1,33 @@
 package wxtools
 
 import (
+	"github.com/rosbit/go-wx-api/v2/call-wx"
+	"github.com/rosbit/go-wx-api/v2/auth"
+	"github.com/rosbit/go-wx-api/v2/conf"
 	"fmt"
-	"github.com/rosbit/go-wx-api/auth"
 )
 
-func SetTemplateIndustry(accessToken string, industryIds [2]string) ([]byte, error) {
-	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/template/api_set_industry?access_token=%s", accessToken)
-	return wxauth.JsonCall(url, "POST", map[string]string{
-		"industry_id1": industryIds[0],
-		"industry_id2": industryIds[1],
-	})
+func SetTemplateIndustry(name string, industryIds [2]string) (map[string]interface{}, error) {
+	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
+		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/template/api_set_industry?access_token=%s", accessToken)
+		body = map[string]interface{}{
+			"industry_id1": industryIds[0],
+			"industry_id2": industryIds[1],
+		}
+		return
+	}
+	return templateAction(name, genParams, "POST", callwx.JsonCall)
 }
 
-func QueryTemplateIndustry(accessToken string) ([]byte, error) {
-	url := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/template/get_industry?access_token=%s", accessToken)
-	return wxauth.CallWxAPI(url, "GET", nil)
+func QueryTemplateIndustry(name string) (map[string]interface{}, error) {
+	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
+		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/template/get_industry?access_token=%s", accessToken)
+		return
+	}
+	return templateAction(name, genParams, "GET", callwx.HttpCall)
 }
 
-func SendTemplateMessage(accessToken string, toUser string, templateId string, data map[string]interface{}, url, mpId, mpPagePath string) ([]byte, error) {
+func SendTemplateMessage(name string, toUser string, templateId string, data map[string]interface{}, url, mpId, mpPagePath string) (map[string]interface{}, error) {
 	dData := make(map[string]interface{})
 	for k,v := range data {
 		dData[k] = map[string]string{"value": fmt.Sprintf("%v", v)}
@@ -38,7 +47,28 @@ func SendTemplateMessage(accessToken string, toUser string, templateId string, d
 			"pagepath": mpPagePath,
 		}
 	}
-	u := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s", accessToken)
-	return wxauth.JsonCall(u, "POST", d)
+
+	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
+		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s", accessToken)
+		body = d
+		return
+	}
+	return templateAction(name, genParams, "POST", callwx.JsonCall)
 }
 
+func templateAction(name string, genParams wxauth.FnGeneParams, method string, call callwx.FnCallWx) (map[string]interface{}, error) {
+	wxParams := wxconf.GetWxParams(name)
+	if wxParams == nil {
+		return nil, fmt.Errorf("no params for %s", name)
+	}
+
+	type result map[string]interface{}
+	var res struct {
+		callwx.BaseResult
+		result
+	}
+	if _, err := wxauth.CallWx(wxParams, genParams, method, call, &res); err != nil {
+		return nil, err
+	}
+	return res.result, nil
+}

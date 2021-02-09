@@ -1,29 +1,13 @@
 package wxapi
 
 import (
-	"io"
-	"github.com/rosbit/go-wx-api/auth"
-	"github.com/rosbit/go-wx-api/msg"
-	"github.com/rosbit/go-wx-api/log"
-	"github.com/rosbit/go-wx-api/conf"
+	"github.com/rosbit/go-wx-api/v2/conf"
 )
 
-type WxHandler struct {
-	appIdHandler *wxauth.WxAppIdAuthHandler
-	appMsgParser *wxmsg.WxAppIdMsgParser
+func InitWx(tokenStorePath string) {
+	wxconf.InitTokenStorePath(tokenStorePath)
 }
 
-var (
-	defaultWxHandler *WxHandler
-)
-
-func InitWxAPI(workerNum int, logger io.Writer) {
-	defaultWxHandler = InitWxAPIWithParams(nil, workerNum, logger)
-}
-
-func InitWxAPIWithParams(params *wxconf.WxParamsT, workerNum int, logger io.Writer) *WxHandler {
-	wxlog.SetLogger(logger)
-	appIdHandler := wxauth.StartAuthThreads(params, workerNum)
-	appIdMsgParser := wxmsg.StartWxMsgParsers(params, workerNum)
-	return &WxHandler{appIdHandler, appIdMsgParser}
+func SetWxParams(serviceName string, token, appId, appSecret, aesKey string) error {
+	return wxconf.NewWxParams(serviceName, token, appId, appSecret, aesKey)
 }

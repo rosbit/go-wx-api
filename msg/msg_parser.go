@@ -1,18 +1,17 @@
 /**
  * 触发消息/事件处理
- * 1. wxapi.ParseMessageBody()  --- 获取消息/事件的(消息体,时间戳,nonce,error)，主要用于调试
- * 2. wxapi.GetReply([]byte)    --- 根据消息体触发消息处理函数得到返回结果。如果使用default_rest.go的实现不需要关心它
+ *  wxapi.GetReply([]byte)    --- 根据消息体触发消息处理函数得到返回结果。如果使用default_rest.go的实现不需要关心它
  */
 package wxmsg
 
 import (
+	"github.com/rosbit/go-wx-api/v2/conf"
+	"github.com/rosbit/go-wx-api/v2/log"
 	"github.com/beevik/etree"
-	"fmt"
-	"net/http"
 	"io/ioutil"
+	"fmt"
 	"net/url"
-	"github.com/rosbit/go-wx-api/log"
-	"github.com/rosbit/go-wx-api/conf"
+	"net/http"
 )
 
 var SUCCESS_TEXT = []byte("success")
@@ -102,11 +101,15 @@ type _reqMsg struct {
 }
 
 type WxAppIdMsgParser struct {
-	wxParams *wxconf.WxParamsT
+	wxParams *wxconf.WxParamT
 	msgChan chan *_reqMsg
 
 	messageHandlers map[string]FnMessageHandler
 	eventHandlers   map[string]FnMessageHandler
+}
+
+func (p *WxAppIdMsgParser) GetAppId() string {
+	return p.wxParams.AppId
 }
 
 // 消息解析线程，被GetReply()触发，通过getReply()完成实际的消息处理
@@ -121,13 +124,8 @@ func (p *WxAppIdMsgParser) msgParser() {
 }
 
 // 初始化应用时启动若干个消息解析线程
-func StartWxMsgParsers(params *wxconf.WxParamsT, workNum int) *WxAppIdMsgParser {
-	p := &WxAppIdMsgParser{}
-	if params == nil {
-		p.wxParams = &wxconf.WxParams
-	} else {
-		p.wxParams = params
-	}
+func StartWxMsgParsers(params *wxconf.WxParamT, workNum int) *WxAppIdMsgParser {
+	p := &WxAppIdMsgParser{wxParams:params}
 	p.RegisterWxMsgHandler(MsgHandler) // set default msg handler.
 
 	p.msgChan = make(chan *_reqMsg, workNum)
@@ -160,7 +158,7 @@ func getEncryptedMsg(body []byte) (string, error) {
 }
 
 // 从GetMessageBody()独立出来，可以通过各种方式调用，方便调试
-func parseMessageBody(wxParams *wxconf.WxParamsT, u *url.URL, body []byte) ([]byte, string, string, error) {
+func parseMessageBody(wxParams *wxconf.WxParamT, u *url.URL, body []byte) ([]byte, string, string, error) {
 	query := u.Query()
 	encrypt_type := query.Get("encrypt_type")
 	if encrypt_type == "" {
@@ -187,11 +185,6 @@ func parseMessageBody(wxParams *wxconf.WxParamsT, u *url.URL, body []byte) ([]by
 	} else {
 		return nil, "", "", fmt.Errorf("unsupported encrypted method")
 	}
-}
-
-// 使用缺省配置解析消息，可以用于调试
-func ParseMessageBody(u *url.URL, body []byte) ([]byte, string, string, error) {
-	return parseMessageBody(&wxconf.WxParams, u, body)
 }
 
 // 获取服务号收到的消息参数，返回 (消息体, 时间戳, nonce, error)

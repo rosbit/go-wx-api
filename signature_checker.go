@@ -5,11 +5,11 @@
 package wxapi
 
 import (
+	"github.com/rosbit/go-wx-api/v2/msg"
 	"net/http"
 	"strconv"
 	"time"
 	"strings"
-	"github.com/rosbit/go-wx-api/msg"
 )
 
 /**

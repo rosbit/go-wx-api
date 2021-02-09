@@ -1,100 +1,106 @@
 /**
  * RESTful API implementation
- *  GET  /wx         -- 用于实现服务号接口配置，实际路径通过http路由关联
- *  POST /wx         -- 处理微信消息/事件的入口，实际路径通过http路由关联
- *  GET  /redirect   -- 微信网页授权接口，处理服务号菜单的总入口，
- *                      不同菜单通过网页授权参数state区分，实际路径通过http路由关联
  * Rosbit Xu
  */
 package wxapi
 
 import (
+	"github.com/rosbit/go-wx-api/v2/oauth2"
+	"github.com/rosbit/go-wx-api/v2/msg"
+	"github.com/rosbit/go-wx-api/v2/conf"
+	"github.com/rosbit/go-wx-api/v2/log"
+	"fmt"
 	"net/http"
-	"github.com/rosbit/go-wx-api/log"
-	"github.com/rosbit/go-wx-api/auth"
 )
 
 // 用于微信服务号设置
-func Echo(w http.ResponseWriter, r *http.Request) {
-	defaultWxHandler.Echo(w, r)
-}
-
-// 微信服务号消息/事件处理入口
-func Request(w http.ResponseWriter, r *http.Request) {
-	defaultWxHandler.Request(w, r)
-}
-
-// 微信网页授权
-func Redirect(w http.ResponseWriter, r *http.Request) {
-	defaultWxHandler.Redirect(w, r)
-}
-
-func _WriteMessage(w http.ResponseWriter, msg string) {
-	w.Write([]byte(msg))
-}
-
-func _WriteBytes(w http.ResponseWriter, msg []byte) {
-	w.Write(msg)
-}
-
-func (wx *WxHandler) Echo(w http.ResponseWriter, r *http.Request) {
-	wxlog.Logf("wxapi.Echo for appId %s called: %s\n", wx.appIdHandler.GetAppId(), r.RequestURI)
-	q := r.URL.Query()
-	echostr := q.Get("echostr")
-	if echostr != "" {
-		_WriteMessage(w, echostr)
-	} else {
-		_WriteMessage(w, "hello, this is handler view")
-	}
-}
-
-func (wx *WxHandler) Request(w http.ResponseWriter, r *http.Request) {
-	wxlog.Logf("wxapi.Request for appId %s called: %s\n", wx.appIdHandler.GetAppId(), r.RequestURI)
-	msgBody, timestamp, nonce, err := wx.appMsgParser.GetMessageBody(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusForbidden)
-		return
-	}
-	if msgBody == nil {
-		http.Error(w, "no message", http.StatusBadRequest)
-		return
-	}
-
-	replyMsg, err := wx.appMsgParser.GetReply(msgBody)
-	if err != nil || nonce == "" {
-		_WriteBytes(w, replyMsg)
-		return
-	}
-	_WriteBytes(w, wx.appMsgParser.EncryptReply(replyMsg, timestamp, nonce))
-}
-
-func (wx *WxHandler) Redirect(w http.ResponseWriter, r *http.Request) {
-	wxlog.Logf("wxapi.Redirect for appId %s called: %s\n", wx.appIdHandler.GetAppId(), r.RequestURI)
-	code, state, err := wxauth.ParseRedirectArgs(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if wx.appIdHandler.HasRedirectUrl() {
-		wx.appIdHandler.AuthRedirectUrl(w, r, code, state)
-		return
-	}
-
-	msg, headers, rurl, err := wx.appIdHandler.AuthRedirect(code, state)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if headers != nil {
-		for k,v := range headers {
-			w.Header().Add(k, v)
+// 路由方法: GET
+// uri?signature=xxx=timestamp=xxx&nonce=xxx&echostr=xxx
+func CreateEcho(token string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		signature := q.Get("signature")
+		timestamp := q.Get("timestamp")
+		nonce := q.Get("nonce")
+		echostr := q.Get("echostr")
+		var h string
+		if len(signature) == 0 || len(timestamp) == 0 || len(nonce) == 0 || len(echostr) == 0 {
+			goto ERR
 		}
-	}
-	if rurl != "" {
-		http.Redirect(w, r, rurl, http.StatusFound)
+
+		h = wxmsg.HashStrings([]string{
+			token, timestamp, nonce,
+		})
+		if signature != h {
+			goto ERR
+		}
+
+		fmt.Fprintf(w, "%s", echostr)
 		return
+ERR:
+		fmt.Fprintf(w, "hello, this is handler view")
 	}
-	_WriteMessage(w, msg)
+}
+
+// 创建微信服务号消息/事件处理入口
+// 路由方法: POST
+// @param serviceName  配置项的名称
+// @parma workerNum    处理消息的并发数
+// @param msgHandler   消息/事件处理器，根据实际情况实现
+func CreateMsgHandler(serviceName string, workerNum int, msgHandler wxmsg.WxMsgHandler) http.HandlerFunc {
+	params := wxconf.GetWxParams(serviceName)
+	if params == nil {
+		panic(fmt.Errorf("params for %s not found", serviceName))
+	}
+	appMsgParser := wxmsg.StartWxMsgParsers(params, workerNum)
+	appMsgParser.RegisterWxMsgHandler(msgHandler)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		wxlog.Logf("wxapi.Request for appId %s called: %s\n", params.AppId, r.RequestURI)
+		msgBody, timestamp, nonce, err := appMsgParser.GetMessageBody(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		if msgBody == nil {
+			http.Error(w, "no message", http.StatusBadRequest)
+			return
+		}
+
+		replyMsg, err := appMsgParser.GetReply(msgBody)
+		if err != nil || nonce == "" {
+			w.Write(replyMsg)
+			return
+		}
+		w.Write(appMsgParser.EncryptReply(replyMsg, timestamp, nonce))
+	}
+}
+
+// 创建网页授权处理器
+// 路由方法: GET
+// @param serviceName  配置项的名称
+// @parma workerNum    处理消息的并发数
+// @param redirectUrl  该URL将全权决定网页授权的处理
+//     请求方式: POST
+//     请求BODY: 是一个JSON: {"appId": "xxx", "openId": "xxx", "state": "state"}
+//     该URL的以POST形式接收参数，而且会得到所有的HTTP头信息，可以设置任何的响应头信息
+//     响应结果直接显示在公众号浏览器中，响应时间要控制好，避免微信服务超时
+// @param userInfoFlag 只取第一项，用于检查转发url中是否有标志串；该值存在表示使用 snsapi_userinfo 获取用户信息
+func CreateOAuth2Redirector(serviceName string, workerNum int, redirectUrl string, userInfoFlag ...string) http.HandlerFunc {
+	params := wxconf.GetWxParams(serviceName)
+	if params == nil {
+		panic(fmt.Errorf("params for %s not found", serviceName))
+	}
+	oauth2Redirector := wxoauth2.StartAuthThreads(serviceName, params.AppId, workerNum, redirectUrl, userInfoFlag...)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		wxlog.Logf("wxapi.Redirect for appId %s called: %s\n", params.AppId, r.RequestURI)
+		code, state, err := wxoauth2.ParseRedirectArgs(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		oauth2Redirector.AuthRedirectUrl(w, r, code, state)
+	}
 }

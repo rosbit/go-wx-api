@@ -6,18 +6,18 @@
 package wxmsg
 
 import (
-	"sort"
-	"fmt"
+	"github.com/rosbit/go-wx-api/v2/conf"
+	"encoding/base64"
+	"encoding/binary"
 	"crypto/cipher"
 	"crypto/sha1"
 	"crypto/aes"
-	"encoding/base64"
-	"encoding/binary"
-	"math/rand"
+	"sort"
+	"fmt"
+	"io"
 	"time"
 	"bytes"
-	"io"
-	"github.com/rosbit/go-wx-api/conf"
+	"math/rand"
 )
 
 func init() {
@@ -45,7 +45,7 @@ func _PKCS5UnPadding(origData []byte) []byte {
     return origData[:(length - unpadding)]
 }
 
-func decryptMsg(wxParams *wxconf.WxParamsT, body string, signature string, timestamp string, nonce string) ([]byte, error) {
+func decryptMsg(wxParams *wxconf.WxParamT, body string, signature string, timestamp string, nonce string) ([]byte, error) {
 	l := []string{wxParams.Token, timestamp, nonce, body}
 	hashcode := HashStrings(l)
 	if hashcode != signature {
@@ -94,7 +94,7 @@ func _msgToPad(msgLen int) []byte {
 	return pad
 }
 
-func encryptMsg(wxParams *wxconf.WxParamsT, msg []byte, timestamp, nonce string) (string, string) {
+func encryptMsg(wxParams *wxconf.WxParamT, msg []byte, timestamp, nonce string) (string, string) {
 	randBytes := GetRandomBytes(16)
 	msgLenInNet := make([]byte, 4)
 	binary.BigEndian.PutUint32(msgLenInNet, uint32(len(msg)))
