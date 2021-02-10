@@ -1,4 +1,4 @@
 github.com/beevik/etree v1.1.0 h1:T0xke/WvNtMoCqgzPhkX2r4rjY3GDZFi+FjpRZY2Jbs=
 github.com/beevik/etree v1.1.0/go.mod h1:r8Aw8JqVegEf0w2fDnATrX9VpkMcyFeM0FhwO62wh+A=
-github.com/rosbit/go-wget v1.2.7 h1:TsfsXAPvqPqOvXDmk9XsH5DOHe6CeQ8GqTf4Jbl6gas=
-github.com/rosbit/go-wget v1.2.7/go.mod h1:8Tt92GKM/K9WI65yYkX0lwJDnRp64Vd082ojViWT6T4=
+github.com/rosbit/go-wget v1.3.0 h1:1e8pEX08k4MsqyUyp77WbMZym/ZI38e/dSopa4MwFsk=
+github.com/rosbit/go-wget v1.3.0/go.mod h1:8Tt92GKM/K9WI65yYkX0lwJDnRp64Vd082ojViWT6T4=

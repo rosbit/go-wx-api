@@ -4,7 +4,6 @@
 package wxoauth2
 
 import (
-	"github.com/rosbit/go-wx-api/v2/auth"
 	"net/http/httputil"
 	"encoding/json"
 	"io/ioutil"
@@ -39,7 +38,7 @@ type WxOAuth2Handler struct {
 	redirectUrl    string     // 转发处理URL
 }
 
-func (handler *WxOAuth2Handler) redirect(req *_redirectData, wxUser *wxauth.WxUser) {
+func (handler *WxOAuth2Handler) redirect(req *_redirectData, wxUser *WxUser) {
 	code, state, w, r := req.code, req.state, req.w, req.r
 
 	openId, err := wxUser.GetOpenId(code) // 根据请求code获取用户的openId
@@ -95,7 +94,7 @@ func (handler *WxOAuth2Handler) redirect(req *_redirectData, wxUser *wxauth.WxUs
 
 // 微信网页授权处理线程，输入请求被AuthRedirectUrl()触发
 func (handler *WxOAuth2Handler) authThread() {
-	wxUser := wxauth.NewWxUser(handler.service)
+	wxUser := NewWxUser(handler.service)
 
 	for req := range handler.reqs {
 		handler.redirect(req, wxUser)

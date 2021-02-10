@@ -1,14 +1,14 @@
-package wxauth
+package wxoauth2
 
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/conf"
+	"github.com/rosbit/go-wx-api/v2/auth"
+	"github.com/rosbit/go-wget"
 	"fmt"
 	"time"
 	"strings"
 )
-
-type WxUserInfo map[string]interface{} // 由于文档上sex是string类型，实际是整型。干脆不用struct解析了
 
 type WxUser struct {
 	openId string
@@ -18,7 +18,7 @@ type WxUser struct {
 	scope []string
 	wxParams *wxconf.WxParamT
 
-	UserInfo WxUserInfo
+	UserInfo wxauth.WxUserInfo
 }
 
 func NewWxUser(name string) *WxUser {
@@ -41,36 +41,16 @@ func (user *WxUser) GetOpenId(code string) (string, error) {
 	return user.openId, nil
 }
 
-func GetUserInfo(name, openId string) (map[string]interface{}, error) {
-	wxParams := wxconf.GetWxParams(name)
-	if wxParams == nil {
-		return nil, fmt.Errorf("no wxParams found for service %s", name)
-	}
-	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
-		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/user/info?access_token=%s&openid=%s&lang=zh_CN", accessToken, openId)
-		return
-	}
-
-	var res struct {
-		callwx.BaseResult
-		WxUserInfo
-	}
-	if _, err := CallWx(wxParams, genParams, "GET", callwx.HttpCall, &res); err != nil {
-		return nil, err
-	}
-	return res.WxUserInfo, nil
-}
-
 // get user info by common access token
 // please call this method after calling getOpenId().
 // this calling will succeed if params are valid.
 func (user *WxUser) GetInfoByAccessToken() (map[string]interface{}, error) {
-	token := NewAccessToken(user.wxParams)
+	token := wxauth.NewAccessToken(user.wxParams)
 	accessToken, err := token.Get()
 	if err != nil {
 		return nil, err
 	}
-	return GetUserInfo(accessToken, user.openId)
+	return wxauth.GetUserInfo(accessToken, user.openId)
 }
 
 // get user info with OAuth2 API.
@@ -80,9 +60,9 @@ func (user *WxUser) GetInfo() error {
 	url := fmt.Sprintf("https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN", user.accessToken, user.openId)
 	var res struct {
 		callwx.BaseResult
-		WxUserInfo
+		wxauth.WxUserInfo
 	}
-	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &res); err != nil {
+	if _, err := callwx.CallWx(url, "GET", nil, nil, wget.HttpCallJ, &res); err != nil {
 		return err
 	}
 	user.UserInfo = res.WxUserInfo
@@ -98,7 +78,7 @@ func (user *WxUser) getAccessToken(url string) error {
 		OpenId       string `json:"openid"`
 		Scope        string `json:"scope"`
 	}
-	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &token); err != nil {
+	if _, err := callwx.CallWx(url, "GET", nil, nil, wget.HttpCallJ, &token); err != nil {
 		return err
 	}
 

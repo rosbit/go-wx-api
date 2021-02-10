@@ -3,7 +3,7 @@ package wxtools
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/auth"
-	"github.com/rosbit/go-wx-api/v2/conf"
+	"github.com/rosbit/go-wget"
 	"fmt"
 )
 
@@ -53,12 +53,6 @@ func createForeverQr(name string, sceneId interface{}, action, idName string) (s
 }
 
 func createQr(name string, params map[string]interface{}) (ticketURL2ShowQrCode, urlIncluedInQrcode string, err error) {
-	wxParams := wxconf.GetWxParams(name)
-	if wxParams == nil {
-		err = fmt.Errorf("no params for %s", name)
-		return
-	}
-
 	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
 		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s", accessToken)
 		body = params
@@ -71,7 +65,7 @@ func createQr(name string, params map[string]interface{}) (ticketURL2ShowQrCode,
 		ExpireSeconds int    `json:"expire_seconds"`
 		Url           string `json:"url"`
 	}
-	if _, err = wxauth.CallWx(wxParams, genParams, "POST", callwx.JsonCall, &res); err != nil {
+	if _, err = wxauth.CallWx(name, genParams, "POST", wget.JsonCallJ, &res); err != nil {
 		return
 	}
 

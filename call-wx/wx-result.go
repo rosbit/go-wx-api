@@ -1,8 +1,9 @@
 package callwx
 
 import (
-	"encoding/json"
+	"github.com/rosbit/go-wget"
 	"fmt"
+	"net/http"
 )
 
 type WxResult interface {
@@ -21,15 +22,13 @@ func (b *BaseResult) GetMsg() string {
 	return b.Errmsg
 }
 
-func CallWx(url string, method string, params interface{}, headers map[string]string, call FnCallWx, res WxResult) (code int, err error) {
-	resp, err := call(url, method, params, headers)
+func CallWx(url string, method string, params interface{}, headers map[string]string, call wget.FnCallJ, res WxResult) (code int, err error) {
+	status, err := call(url, method, params, headers, res)
 	if err != nil {
 		return -1, err
 	}
-	fmt.Printf("resp: %s\n", resp)
-
-	if err = json.Unmarshal(resp, res); err != nil {
-		return -2, err
+	if status != http.StatusOK {
+		return -2, fmt.Errorf("status %d", status)
 	}
 	if res.GetCode() != 0 {
 		return res.GetCode(), fmt.Errorf("%s", res.GetMsg())

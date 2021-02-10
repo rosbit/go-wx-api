@@ -3,20 +3,14 @@ package wxtools
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/auth"
-	"github.com/rosbit/go-wx-api/v2/conf"
 	"github.com/rosbit/go-wx-api/v2/msg"
+	"github.com/rosbit/go-wget"
 	"crypto/sha1"
 	"time"
 	"fmt"
 )
 
 func SignJSAPI(name string, url string) (nonce string, timestamp int64, signature string, err error) {
-	params := wxconf.GetWxParams(name)
-	if params == nil {
-		err = fmt.Errorf("no params for %s", name)
-		return
-	}
-
 	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
 		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=%s&type=jsapi", accessToken)
 		return
@@ -27,7 +21,7 @@ func SignJSAPI(name string, url string) (nonce string, timestamp int64, signatur
 		Ticket   string
 		ExpiresIn int `json:"expires_in"`
 	}
-	if _, err = wxauth.CallWx(params, genParams, "GET", callwx.HttpCall, &res); err != nil {
+	if _, err = wxauth.CallWx(name, genParams, "GET", wget.HttpCallJ, &res); err != nil {
 		return
 	}
 

@@ -2,18 +2,13 @@ package wxtools
 
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
-	"github.com/rosbit/go-wx-api/v2/conf"
 	"github.com/rosbit/go-wx-api/v2/auth"
+	"github.com/rosbit/go-wget"
 	"fmt"
 	"os"
 )
 
 func CreateMenu(name string, menuJsonFile string) (error) {
-	params := wxconf.GetWxParams(name)
-	if params == nil {
-		return fmt.Errorf("no params for %s", name)
-	}
-
 	fpMenuJson, err := os.Open(menuJsonFile)
 	if err != nil {
 		return err
@@ -29,7 +24,7 @@ func CreateMenu(name string, menuJsonFile string) (error) {
 	var res struct {
 		callwx.BaseResult
 	}
-	_, err = wxauth.CallWx(params, genParams, "POST", callwx.JsonCall, &res)
+	_, err = wxauth.CallWx(name, genParams, "POST", wget.JsonCallJ, &res)
 	return err
 }
 
@@ -42,11 +37,6 @@ func CurrentSelfmenuInfo(name string) (map[string]interface{}, error) {
 }
 
 func queryMenu(name string, uriFmt string) (map[string]interface{}, error) {
-	params := wxconf.GetWxParams(name)
-	if params == nil {
-		return nil, fmt.Errorf("no params for %s", name)
-	}
-
 	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
 		url = fmt.Sprintf(uriFmt, accessToken)
 		return
@@ -57,18 +47,13 @@ func queryMenu(name string, uriFmt string) (map[string]interface{}, error) {
 		callwx.BaseResult
 		menu
 	}
-	if _, err := wxauth.CallWx(params, genParams, "GET", callwx.HttpCall, &res); err != nil {
+	if _, err := wxauth.CallWx(name, genParams, "GET", wget.HttpCallJ, &res); err != nil {
 		return nil, err
 	}
 	return res.menu, nil
 }
 
 func DeleteMenu(name string) (error) {
-	params := wxconf.GetWxParams(name)
-	if params == nil {
-		return fmt.Errorf("no params for %s", name)
-	}
-
 	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
 		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=%s", accessToken)
 		return
@@ -77,7 +62,7 @@ func DeleteMenu(name string) (error) {
 	var res struct {
 		callwx.BaseResult
 	}
-	_, err := wxauth.CallWx(params, genParams, "GET", callwx.HttpCall, &res)
+	_, err := wxauth.CallWx(name, genParams, "GET", wget.HttpCallJ, &res)
 	return err
 }
 
