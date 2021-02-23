@@ -18,7 +18,7 @@ type WxUser struct {
 	scope []string
 	wxParams *wxconf.WxParamT
 
-	UserInfo wxauth.WxUserInfo
+	UserInfo *wxauth.WxUserInfo
 }
 
 func NewWxUser(name string) *WxUser {
@@ -44,7 +44,7 @@ func (user *WxUser) GetOpenId(code string) (string, error) {
 // get user info by common access token
 // please call this method after calling getOpenId().
 // this calling will succeed if params are valid.
-func (user *WxUser) GetInfoByAccessToken() (map[string]interface{}, error) {
+func (user *WxUser) GetInfoByAccessToken() (*wxauth.WxUserInfo, error) {
 	token := wxauth.NewAccessToken(user.wxParams)
 	accessToken, err := token.Get()
 	if err != nil {
@@ -65,7 +65,8 @@ func (user *WxUser) GetInfo() error {
 	if _, err := callwx.CallWx(url, "GET", nil, nil, wget.HttpCallJ, &res); err != nil {
 		return err
 	}
-	user.UserInfo = res.WxUserInfo
+	fmt.Printf("oauth2 userInfo: %v\n", res.WxUserInfo)
+	user.UserInfo = &res.WxUserInfo
 	return nil
 }
 

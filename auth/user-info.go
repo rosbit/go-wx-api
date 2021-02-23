@@ -6,9 +6,19 @@ import (
 	"fmt"
 )
 
-type WxUserInfo map[string]interface{} // 由于文档上sex是string类型，实际是整型。干脆不用struct解析了
+type WxUserInfo struct {
+	OpenId   string `json:"openid"`
+	NickName string `json:"nickname"`
+	Sex int8 `json:"sex"`
+	Province string `json:"province"`
+	City     string `json:"city"`
+	Country  string `json:"country"`
+	HeadImgUrl string `json:"headimgurl"`
+	Privilege []string `json:"privilege"`
+	UnionId string `json:"unionid"`
+}
 
-func GetUserInfo(name, openId string) (map[string]interface{}, error) {
+func GetUserInfo(name, openId string) (*WxUserInfo, error) {
 	genParams := func(accessToken string)(url string, body interface{}, headers map[string]string) {
 		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/user/info?access_token=%s&openid=%s&lang=zh_CN", accessToken, openId)
 		return
@@ -21,5 +31,5 @@ func GetUserInfo(name, openId string) (map[string]interface{}, error) {
 	if _, err := CallWx(name, genParams, "GET", wget.HttpCallJ, &res); err != nil {
 		return nil, err
 	}
-	return res.WxUserInfo, nil
+	return &res.WxUserInfo, nil
 }
