@@ -17,3 +17,7 @@ func Logf(format string, a ...interface{}) (n int, err error) {
 	}
 	return 0, nil
 }
+
+func GetLogger() io.Writer {
+	return msgWriter
+}

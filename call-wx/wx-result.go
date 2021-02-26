@@ -2,6 +2,7 @@ package callwx
 
 import (
 	"github.com/rosbit/go-wget"
+	"github.com/rosbit/go-wx-api/v2/log"
 	"fmt"
 	"net/http"
 )
@@ -23,7 +24,7 @@ func (b *BaseResult) GetMsg() string {
 }
 
 func CallWx(url string, method string, params interface{}, headers map[string]string, call wget.FnCallJ, res WxResult) (code int, err error) {
-	status, err := call(url, method, params, headers, res)
+	status, err := call(url, method, params, headers, res, wxlog.GetLogger())
 	if err != nil {
 		return -1, err
 	}
