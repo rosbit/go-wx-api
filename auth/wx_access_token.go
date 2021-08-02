@@ -1,7 +1,6 @@
 package wxauth
 
 import (
-	"github.com/rosbit/go-wget"
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/conf"
 	"time"
@@ -50,7 +49,7 @@ func (token *AccessToken) get_access_token() error {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
 	}
-	if _, err := callwx.CallWx(url, "GET", nil, nil, wget.HttpCallJ, &res); err != nil {
+	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &res); err != nil {
 		return err
 	}
 

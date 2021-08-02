@@ -4,7 +4,6 @@ import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/auth"
 	"github.com/rosbit/go-wx-api/v2/msg"
-	"github.com/rosbit/go-wget"
 	"crypto/sha1"
 	"time"
 	"fmt"
@@ -21,7 +20,7 @@ func SignJSAPI(name string, url string) (nonce string, timestamp int64, signatur
 		Ticket   string
 		ExpiresIn int `json:"expires_in"`
 	}
-	if _, err = wxauth.CallWx(name, genParams, "GET", wget.HttpCallJ, &res); err != nil {
+	if _, err = wxauth.CallWx(name, genParams, "GET", callwx.HttpCall, &res); err != nil {
 		return
 	}
 

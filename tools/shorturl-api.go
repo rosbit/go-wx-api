@@ -3,7 +3,6 @@ package wxtools
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/auth"
-	"github.com/rosbit/go-wget"
 	"fmt"
 )
 
@@ -21,7 +20,7 @@ func MakeShorturl(name string, longUrl string) (shortUrl string, err error) {
 		callwx.BaseResult
 		ShortUrl string `json:"short_url"`
 	}
-	if _, err = wxauth.CallWx(name, genParams, "POST", wget.JsonCallJ, &res); err != nil {
+	if _, err = wxauth.CallWx(name, genParams, "POST", callwx.JSONCall, &res); err != nil {
 		return
 	}
 	shortUrl = res.ShortUrl

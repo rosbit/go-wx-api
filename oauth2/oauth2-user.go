@@ -4,7 +4,6 @@ import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/conf"
 	"github.com/rosbit/go-wx-api/v2/auth"
-	"github.com/rosbit/go-wget"
 	"fmt"
 	"time"
 	"strings"
@@ -62,7 +61,7 @@ func (user *WxUser) GetInfo() error {
 		callwx.BaseResult
 		wxauth.WxUserInfo
 	}
-	if _, err := callwx.CallWx(url, "GET", nil, nil, wget.HttpCallJ, &res); err != nil {
+	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &res); err != nil {
 		return err
 	}
 	fmt.Printf("oauth2 userInfo: %v\n", res.WxUserInfo)
@@ -79,7 +78,7 @@ func (user *WxUser) getAccessToken(url string) error {
 		OpenId       string `json:"openid"`
 		Scope        string `json:"scope"`
 	}
-	if _, err := callwx.CallWx(url, "GET", nil, nil, wget.HttpCallJ, &token); err != nil {
+	if _, err := callwx.CallWx(url, "GET", nil, nil, callwx.HttpCall, &token); err != nil {
 		return err
 	}
 

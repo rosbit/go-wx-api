@@ -3,7 +3,6 @@ package wxtools
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/auth"
-	"github.com/rosbit/go-wget"
 	"fmt"
 	"os"
 	"encoding/json"
@@ -25,7 +24,7 @@ func CreateMenu(name string, menuJsonFile string) (error) {
 	var res struct {
 		callwx.BaseResult
 	}
-	_, err = wxauth.CallWx(name, genParams, "POST", wget.JsonCallJ, &res)
+	_, err = wxauth.CallWx(name, genParams, "POST", callwx.JSONCall, &res)
 	return err
 }
 
@@ -43,7 +42,7 @@ func QueryMenu(name string) ([]byte, error) {
 		callwx.BaseResult
 		menu
 	}
-	if _, err := wxauth.CallWx(name, genParams, "GET", wget.HttpCallJ, &res); err != nil {
+	if _, err := wxauth.CallWx(name, genParams, "GET", callwx.HttpCall, &res); err != nil {
 		return nil, err
 	}
 	return json.Marshal(res.menu)
@@ -63,7 +62,7 @@ func CurrentSelfmenuInfo(name string) ([]byte, error) {
 		callwx.BaseResult
 		menu
 	}
-	if _, err := wxauth.CallWx(name, genParams, "GET", wget.HttpCallJ, &res); err != nil {
+	if _, err := wxauth.CallWx(name, genParams, "GET", callwx.HttpCall, &res); err != nil {
 		return nil, err
 	}
 	return json.Marshal(res.menu)
@@ -78,7 +77,7 @@ func DeleteMenu(name string) (error) {
 	var res struct {
 		callwx.BaseResult
 	}
-	_, err := wxauth.CallWx(name, genParams, "GET", wget.HttpCallJ, &res)
+	_, err := wxauth.CallWx(name, genParams, "GET", callwx.HttpCall, &res)
 	return err
 }
 

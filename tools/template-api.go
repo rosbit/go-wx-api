@@ -3,7 +3,6 @@ package wxtools
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/auth"
-	"github.com/rosbit/go-wget"
 	"fmt"
 )
 
@@ -16,7 +15,7 @@ func SetTemplateIndustry(name string, industryIds [2]string) (map[string]interfa
 		}
 		return
 	}
-	return templateAction(name, genParams, "POST", wget.JsonCallJ)
+	return templateAction(name, genParams, "POST", callwx.JSONCall)
 }
 
 func QueryTemplateIndustry(name string) (map[string]interface{}, error) {
@@ -24,7 +23,7 @@ func QueryTemplateIndustry(name string) (map[string]interface{}, error) {
 		url = fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/template/get_industry?access_token=%s", accessToken)
 		return
 	}
-	return templateAction(name, genParams, "GET", wget.HttpCallJ)
+	return templateAction(name, genParams, "GET", callwx.HttpCall)
 }
 
 func SendTemplateMessage(name string, toUser string, templateId string, data map[string]interface{}, url, mpId, mpPagePath string) (map[string]interface{}, error) {
@@ -53,10 +52,10 @@ func SendTemplateMessage(name string, toUser string, templateId string, data map
 		body = d
 		return
 	}
-	return templateAction(name, genParams, "POST", wget.JsonCallJ)
+	return templateAction(name, genParams, "POST", callwx.JSONCall)
 }
 
-func templateAction(name string, genParams wxauth.FnGeneParams, method string, call wget.FnCallJ) (map[string]interface{}, error) {
+func templateAction(name string, genParams wxauth.FnGeneParams, method string, call callwx.FnCall) (map[string]interface{}, error) {
 	type result map[string]interface{}
 	var res struct {
 		callwx.BaseResult

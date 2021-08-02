@@ -1,7 +1,7 @@
 package callwx
 
 import (
-	"github.com/rosbit/go-wget"
+	"github.com/rosbit/gnet"
 	"github.com/rosbit/go-wx-api/v2/log"
 	"fmt"
 	"net/http"
@@ -23,8 +23,14 @@ func (b *BaseResult) GetMsg() string {
 	return b.Errmsg
 }
 
-func CallWx(url string, method string, params interface{}, headers map[string]string, call wget.FnCallJ, res WxResult) (code int, err error) {
-	status, err := call(url, method, params, headers, res, wxlog.GetLogger())
+type FnCall = gnet.FnCallJ
+var (
+	HttpCall = gnet.HttpCallJ
+	JSONCall = gnet.JSONCallJ
+)
+
+func CallWx(url string, method string, params interface{}, headers map[string]string, call FnCall, res WxResult) (code int, err error) {
+	status, err := call(url, res, gnet.M(method), gnet.Params(params), gnet.Headers(headers), gnet.BodyLogger(wxlog.GetLogger()))
 	if err != nil {
 		return -1, err
 	}

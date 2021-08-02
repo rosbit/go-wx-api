@@ -1,7 +1,6 @@
 package wxauth
 
 import (
-	"github.com/rosbit/go-wget"
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"fmt"
 )
@@ -28,7 +27,7 @@ func GetUserInfo(name, openId string) (*WxUserInfo, error) {
 		callwx.BaseResult
 		WxUserInfo
 	}
-	if _, err := CallWx(name, genParams, "GET", wget.HttpCallJ, &res); err != nil {
+	if _, err := CallWx(name, genParams, "GET", callwx.HttpCall, &res); err != nil {
 		return nil, err
 	}
 	return &res.WxUserInfo, nil

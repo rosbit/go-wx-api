@@ -3,7 +3,6 @@ package wxtools
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
 	"github.com/rosbit/go-wx-api/v2/auth"
-	"github.com/rosbit/go-wget"
 	"fmt"
 )
 
@@ -65,7 +64,7 @@ func createQr(name string, params map[string]interface{}) (ticketURL2ShowQrCode,
 		ExpireSeconds int    `json:"expire_seconds"`
 		Url           string `json:"url"`
 	}
-	if _, err = wxauth.CallWx(name, genParams, "POST", wget.JsonCallJ, &res); err != nil {
+	if _, err = wxauth.CallWx(name, genParams, "POST", callwx.JSONCall, &res); err != nil {
 		return
 	}
 
