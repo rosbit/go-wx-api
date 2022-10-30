@@ -9,11 +9,17 @@ import (
 
 type FnGeneParams func(accessToken string)(url string, body interface{}, headers map[string]string)
 
-func CallWx(name string, genParams FnGeneParams, method string, call callwx.FnCall, res callwx.WxResult) (code int, err error) {
+func CallWx(name string, genParams FnGeneParams, method string, call callwx.FnCall, res callwx.WxResult, checkChannelsEc ...bool) (code int, err error) {
 	token := NewAccessToken(name)
 	if token == nil {
 		err = fmt.Errorf("no params for %s", name)
 		return
+	}
+	if len(checkChannelsEc) > 0 && checkChannelsEc[0] {
+		if !token.wxParams.IsChannelsEc {
+			err = fmt.Errorf("params %s is not for channels ec", name)
+			return
+		}
 	}
 	accessToken, err := token.Get()
 	if err != nil {

@@ -8,6 +8,6 @@ func InitWx(tokenStorePath string) {
 	wxconf.InitTokenStorePath(tokenStorePath)
 }
 
-func SetWxParams(serviceName string, token, appId, appSecret, aesKey string) error {
-	return wxconf.NewWxParams(serviceName, token, appId, appSecret, aesKey)
+func SetWxParams(serviceName string, token, appId, appSecret, aesKey string, isChannelsEc ...bool) error {
+	return wxconf.NewWxParams(serviceName, token, appId, appSecret, aesKey, isChannelsEc...)
 }

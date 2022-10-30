@@ -9,6 +9,7 @@ import (
 )
 
 type WxParamT struct {
+	IsChannelsEc bool // 视频号小店标志
 	Token     string
 	AesKey    []byte
 	AppId     string
@@ -37,8 +38,13 @@ func (params *WxParamT) setAesKey(aesKey string) error {
 	return nil
 }
 
-func NewWxParams(name, token, appId, appSecret, aesKey string) error {
-	params := &WxParamT{Token:token, AppId:appId, AppSecret:appSecret}
+func NewWxParams(name, token, appId, appSecret, aesKey string, isChannelsEc ...bool) error {
+	params := &WxParamT{
+		IsChannelsEc: (len(isChannelsEc)>0 && isChannelsEc[0]),
+		Token:token,
+		AppId:appId,
+		AppSecret:appSecret,
+	}
 	if aesKey == "" {
 		wxParams[name] = params
 		return nil
