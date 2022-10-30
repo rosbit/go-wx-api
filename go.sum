@@ -2,5 +2,5 @@ github.com/beevik/etree v1.1.0 h1:T0xke/WvNtMoCqgzPhkX2r4rjY3GDZFi+FjpRZY2Jbs=
 github.com/beevik/etree v1.1.0/go.mod h1:r8Aw8JqVegEf0w2fDnATrX9VpkMcyFeM0FhwO62wh+A=
 github.com/mroth/weightedrand v0.4.1 h1:rHcbUBopmi/3x4nnrvwGJBhX9d0vk+KgoLUZeDP6YyI=
 github.com/mroth/weightedrand v0.4.1/go.mod h1:3p2SIcC8al1YMzGhAIoXD+r9olo/g/cdJgAD905gyNE=
-github.com/rosbit/gnet v0.0.3 h1:N4k8+NlbqnoI3JIuxdyx7Qjg+j2gkcuT/dcPCjc3y+g=
-github.com/rosbit/gnet v0.0.3/go.mod h1:4p58JSylqipqD061GlEB7pSjeU6qJwhxHpzW832KMZI=
+github.com/rosbit/gnet v0.0.10 h1:zBFcCxtG3WDR9TPywsWb3Yb7WbP8YoQR2KatMuQSEk8=
+github.com/rosbit/gnet v0.0.10/go.mod h1:4p58JSylqipqD061GlEB7pSjeU6qJwhxHpzW832KMZI=

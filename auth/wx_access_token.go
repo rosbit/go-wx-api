@@ -15,7 +15,12 @@ type AccessToken struct {
 	wxParams *wxconf.WxParamT
 }
 
-func NewAccessToken(params *wxconf.WxParamT) *AccessToken {
+func NewAccessToken(name string) *AccessToken {
+	params := wxconf.GetWxParams(name)
+	return NewAccessTokenWithParams(params)
+}
+
+func NewAccessTokenWithParams(params *wxconf.WxParamT) *AccessToken {
 	if params == nil {
 		return nil
 	}

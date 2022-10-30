@@ -6,21 +6,8 @@ package wxmsg
 
 import (
 	"github.com/rosbit/go-wx-api/v2/conf"
-	"github.com/rosbit/go-wx-api/v2/log"
 	"github.com/beevik/etree"
-	"io/ioutil"
 	"fmt"
-	"net/url"
-	"net/http"
-)
-
-var SUCCESS_TEXT = []byte("success")
-
-var MustSignatureArgs = []string{"signature", "timestamp", "nonce"}
-const (
-	SIGNATURE = iota
-	TIMESTAMP
-	NONCE
 )
 
 // msgType => ReceivedMsg
@@ -91,41 +78,21 @@ func (p *WxAppIdMsgParser) getReply(msgBody []byte) ([]byte, error) {
 	return replyMsg.ToXML(), nil
 }
 
-type _replyMsg struct {
-	reply []byte
-	err   error
-}
-type _reqMsg struct {
-	msgBody []byte
-	replyChan chan *_replyMsg
-}
-
 type WxAppIdMsgParser struct {
-	wxParams *wxconf.WxParamT
-	msgChan chan *_reqMsg
+	*msgParserAdapter
 
 	messageHandlers map[string]FnMessageHandler
 	eventHandlers   map[string]FnMessageHandler
 }
 
-func (p *WxAppIdMsgParser) GetAppId() string {
-	return p.wxParams.AppId
-}
-
-// 消息解析线程，被GetReply()触发，通过getReply()完成实际的消息处理
-func (p *WxAppIdMsgParser) msgParser() {
-	for {
-		reqMsg := <-p.msgChan
-		msgBody, replyChan := reqMsg.msgBody, reqMsg.replyChan
-
-		reply, err := p.getReply(msgBody)
-		replyChan <- &_replyMsg{reply, err}
-	}
-}
-
 // 初始化应用时启动若干个消息解析线程
 func StartWxMsgParsers(params *wxconf.WxParamT, workNum int) *WxAppIdMsgParser {
-	p := &WxAppIdMsgParser{wxParams:params}
+	p := &WxAppIdMsgParser{
+		msgParserAdapter: &msgParserAdapter{
+			wxParams:params,
+		},
+	}
+	p.msgParserAdapter.mp = p
 	p.RegisterWxMsgHandler(MsgHandler) // set default msg handler.
 
 	p.msgChan = make(chan *_reqMsg, workNum)
@@ -136,18 +103,7 @@ func StartWxMsgParsers(params *wxconf.WxParamT, workNum int) *WxAppIdMsgParser {
 	return p
 }
 
-// 根据消息体获取返回消息
-func (p *WxAppIdMsgParser) GetReply(msgBody []byte) ([]byte, error) {
-	replyChan := make(chan *_replyMsg)
-	p.msgChan <- &_reqMsg{msgBody, replyChan}
-
-	replyMsg := <-replyChan
-	close(replyChan)
-
-	return replyMsg.reply, replyMsg.err
-}
-
-func getEncryptedMsg(body []byte) (string, error) {
+func (p *WxAppIdMsgParser) getEncryptedMsg(body []byte) (string, error) {
 	msg := etree.NewDocument()
 	if err := msg.ReadFromBytes(body); err != nil {
 		return "", err
@@ -155,49 +111,4 @@ func getEncryptedMsg(body []byte) (string, error) {
 
 	root := msg.SelectElement("xml")
 	return _getText(root, "Encrypt")
-}
-
-// 从GetMessageBody()独立出来，可以通过各种方式调用，方便调试
-func parseMessageBody(wxParams *wxconf.WxParamT, u *url.URL, body []byte) ([]byte, string, string, error) {
-	query := u.Query()
-	encrypt_type := query.Get("encrypt_type")
-	if encrypt_type == "" {
-		return body, "", "", nil
-	} else if encrypt_type == "aes" {
-		eBody, err := getEncryptedMsg(body)
-		if err != nil {
-			return nil, "", "", err
-		}
-
-		// signautre args are checked in signatrue_checker, so just get them here
-		args := make([]string, len(MustSignatureArgs))
-		for i, arg := range MustSignatureArgs {
-			args[i] = query.Get(arg)
-		}
-
-		msg_signature := query.Get("msg_signature")
-		msg, err := decryptMsg(wxParams, eBody, msg_signature, args[TIMESTAMP], args[NONCE])
-		if err != nil {
-			return nil, "", "", err
-		}
-		wxlog.Logf("plain msg: %s\n", string(msg))
-		return msg, args[TIMESTAMP], args[NONCE], nil
-	} else {
-		return nil, "", "", fmt.Errorf("unsupported encrypted method")
-	}
-}
-
-// 获取服务号收到的消息参数，返回 (消息体, 时间戳, nonce, error)
-func (p *WxAppIdMsgParser) GetMessageBody(r *http.Request) ([]byte, string, string, error) {
-	if r.Body == nil {
-		return nil, "", "", fmt.Errorf("body expected")
-	}
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, "", "", err
-	}
-	r.Body.Close()
-	wxlog.Logf("body: %s\n", string(body))
-
-	return parseMessageBody(p.wxParams, r.URL, body)
 }

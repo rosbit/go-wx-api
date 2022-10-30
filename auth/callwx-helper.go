@@ -4,19 +4,18 @@ package wxauth
 
 import (
 	"github.com/rosbit/go-wx-api/v2/call-wx"
-	"github.com/rosbit/go-wx-api/v2/conf"
 	"fmt"
 )
 
 type FnGeneParams func(accessToken string)(url string, body interface{}, headers map[string]string)
 
 func CallWx(name string, genParams FnGeneParams, method string, call callwx.FnCall, res callwx.WxResult) (code int, err error) {
-	wxParams := wxconf.GetWxParams(name)
-	if wxParams == nil {
+	token := NewAccessToken(name)
+	if token == nil {
 		err = fmt.Errorf("no params for %s", name)
 		return
 	}
-	accessToken, err := NewAccessToken(wxParams).Get()
+	accessToken, err := token.Get()
 	if err != nil {
 		return 0, err
 	}

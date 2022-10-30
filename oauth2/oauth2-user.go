@@ -44,7 +44,7 @@ func (user *WxUser) GetOpenId(code string) (string, error) {
 // please call this method after calling getOpenId().
 // this calling will succeed if params are valid.
 func (user *WxUser) GetInfoByAccessToken() (*wxauth.WxUserInfo, error) {
-	token := wxauth.NewAccessToken(user.wxParams)
+	token := wxauth.NewAccessTokenWithParams(user.wxParams)
 	accessToken, err := token.Get()
 	if err != nil {
 		return nil, err

@@ -42,7 +42,7 @@ func (t *Ticket) expired() bool {
 }
 
 func (t *Ticket) get_ticket() error {
-	token := NewAccessToken(t.wxParams)
+	token := NewAccessTokenWithParams(t.wxParams)
 	accessToken, err := token.Get()
 	if err != nil {
 		return err

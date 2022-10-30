@@ -57,23 +57,47 @@ func CreateMsgHandler(serviceName string, workerNum int, msgHandler wxmsg.WxMsgH
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		wxlog.Logf("wxapi.Request for appId %s called: %s\n", params.AppId, r.RequestURI)
-		msgBody, timestamp, nonce, err := appMsgParser.GetMessageBody(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
-		}
-		if msgBody == nil {
-			http.Error(w, "no message", http.StatusBadRequest)
-			return
-		}
-
-		replyMsg, err := appMsgParser.GetReply(msgBody)
-		if err != nil || nonce == "" {
-			w.Write(replyMsg)
-			return
-		}
-		w.Write(appMsgParser.EncryptReply(replyMsg, timestamp, nonce))
+		handleMsg(w, r, appMsgParser)
 	}
+}
+
+// 创建视频号小店事件处理入口
+// 路由方法: POST
+// @param serviceName  配置项的名称
+// @parma workerNum    处理消息的并发数
+// @param channelsEcEventHandler 视频号小店事件处理器，根据实际情况实现
+func CreateChannelsEcHandler(serviceName string, workerNum int, channelsEcEventHandler wxmsg.ChannelsEcEventHandler) http.HandlerFunc {
+	params := wxconf.GetWxParams(serviceName)
+	if params == nil {
+		panic(fmt.Errorf("params for %s not found", serviceName))
+	}
+
+	channelsEcEventParser := wxmsg.StartChannelsEcParsers(params, workerNum)
+	channelsEcEventParser.RegisterChannelsEcEventHandler(channelsEcEventHandler)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		wxlog.Logf("wxapi.Request for appId %s called: %s\n", params.AppId, r.RequestURI)
+		handleMsg(w, r, channelsEcEventParser)
+	}
+}
+
+func handleMsg(w http.ResponseWriter, r *http.Request, msgParser wxmsg.MsgParser) {
+	msgBody, timestamp, nonce, err := msgParser.GetMessageBody(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	if msgBody == nil {
+		http.Error(w, "no message", http.StatusBadRequest)
+		return
+	}
+
+	replyMsg, err := msgParser.GetReply(msgBody)
+	if err != nil || nonce == "" {
+		w.Write(replyMsg)
+		return
+	}
+	w.Write(msgParser.EncryptReply(replyMsg, timestamp, nonce))
 }
 
 // 创建网页授权处理器
