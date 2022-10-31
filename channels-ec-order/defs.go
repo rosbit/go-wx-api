@@ -1,3 +1,5 @@
+//go:build copy_it_to_client_usage
+
 package ceord
 
 import (
