@@ -30,7 +30,7 @@ type ChannelsEcEvent struct {
 type OrderCancelEvent struct {
 	ChannelsEcEvent
 	OrderInfo struct {
-		OrderId string `json:"order_id"`
+		OrderId uint64 `json:"order_id"`
 		CancelType int16 `json:"cancel_type"`
 	} `json:"order_info"`
 }
@@ -39,7 +39,7 @@ type OrderCancelEvent struct {
 type OrderPayEvent struct {
 	ChannelsEcEvent
 	OrderInfo struct {
-		OrderId string `json:"order_id"`
+		OrderId uint64 `json:"order_id"`
 		PayTime int64 `json:"pay_time"`
 	} `json:"order_info"`
 }
@@ -48,7 +48,7 @@ type OrderPayEvent struct {
 type OrderConfirmEvent struct {
 	ChannelsEcEvent
 	OrderInfo struct {
-		OrderId string `json:"order_id"`
+		OrderId uint64 `json:"order_id"`
 		ConfirmType int16 `json:"confirm_type"`
 	} `json:"order_info"`
 }
@@ -57,7 +57,7 @@ type OrderConfirmEvent struct {
 type OrderSettleEvent struct {
 	ChannelsEcEvent
 	OrderInfo struct {
-		OrderId string `json:"order_id"`
+		OrderId uint64 `json:"order_id"`
 		SettleTime int64 `json:"settle_time"`
 	} `json:"order_info"`
 }
